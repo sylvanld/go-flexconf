@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
+	"github.com/sylvanld/flexconf/secrets"
 )
 
 func (c *cli) getCmd() *cobra.Command {

@@ -1,4 +1,4 @@
-module forgejo.ovhcloud.tools/sylvan/flexconf
+module github.com/sylvanld/flexconf
 
 go 1.26.4
 

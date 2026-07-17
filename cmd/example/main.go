@@ -18,8 +18,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/cli/secrets"
-	"forgejo.ovhcloud.tools/sylvan/flexconf/settings"
+	"github.com/sylvanld/flexconf/cli/secrets"
+	"github.com/sylvanld/flexconf/settings"
 )
 
 const appName = "example"

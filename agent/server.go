@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
+	"github.com/sylvanld/flexconf/secrets"
 )
 
 // Default expiry values.

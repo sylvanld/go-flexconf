@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
+	"github.com/sylvanld/flexconf/secrets"
 )
 
 // Client is a secrets.Driver that forwards operations to a running agent over a

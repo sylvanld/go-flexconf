@@ -12,7 +12,7 @@ package agent
 import (
 	"errors"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
+	"github.com/sylvanld/flexconf/secrets"
 )
 
 // Protocol operations.

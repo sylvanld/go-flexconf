@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
+	"github.com/sylvanld/flexconf/secrets"
 )
 
 // fakeDriver is an in-memory secrets.Driver for tests (no KeePass, no password).

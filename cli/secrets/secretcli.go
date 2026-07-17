@@ -25,9 +25,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/agent"
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secrets"
-	"forgejo.ovhcloud.tools/sylvan/flexconf/settings"
+	"github.com/sylvanld/flexconf/agent"
+	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/flexconf/settings"
 )
 
 // Defaults for a freshly built command tree.
