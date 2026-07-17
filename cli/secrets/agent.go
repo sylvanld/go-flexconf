@@ -1,4 +1,4 @@
-package secretcli
+package secrets
 
 import (
 	"fmt"

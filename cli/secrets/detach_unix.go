@@ -1,6 +1,6 @@
 //go:build unix
 
-package secretcli
+package secrets
 
 import "syscall"
 

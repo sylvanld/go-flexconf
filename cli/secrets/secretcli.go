@@ -17,7 +17,7 @@
 // The factory takes the app's resolved settings, so the KeePass file, socket,
 // and agent log all live under the app's own configuration directory. Use the
 // options to rename the command or relocate the store.
-package secretcli
+package secrets
 
 import (
 	"strings"

@@ -18,7 +18,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"forgejo.ovhcloud.tools/sylvan/flexconf/secretcli"
+	"forgejo.ovhcloud.tools/sylvan/flexconf/cli/secrets"
 	"forgejo.ovhcloud.tools/sylvan/flexconf/settings"
 )
 
@@ -47,7 +47,7 @@ func run() error {
 		SilenceUsage:  true,
 	}
 	// Mount the reusable secret manager as "example secrets ...".
-	root.AddCommand(secretcli.New(cfg))
+	root.AddCommand(secrets.New(cfg))
 
 	return root.Execute()
 }
