@@ -202,11 +202,11 @@ func LoadFile(cfg *settings.AppConfig, opts ...Option) (*Settings, error) {
 		opt(&o)
 	}
 
-	fsys, file, err := o.rootFS(cfg)
+	fsys, file, dir, err := o.rootFS(cfg)
 	if err != nil {
 		return nil, err
 	}
-	l := &loader{fsys: fsys, env: o.env}
+	l := &loader{fsys: fsys, root: dir, env: o.env}
 
 	root, err := l.readAndParse(file)
 	if err != nil {
@@ -220,16 +220,19 @@ func LoadFile(cfg *settings.AppConfig, opts ...Option) (*Settings, error) {
 }
 
 // rootFS resolves the config path (option → <APP>_CONFIG → cfg default) and
-// returns the fs to read from plus the fs-relative name of the root file.
-func (o options) rootFS(cfg *settings.AppConfig) (fs.FS, string, error) {
+// returns the fs to read from, the fs-relative name of the root file, and the
+// OS directory that fs is rooted at (empty for an injected fs) so read errors
+// can be reported against the full absolute path rather than the bare basename.
+func (o options) rootFS(cfg *settings.AppConfig) (fs.FS, string, string, error) {
 	path, err := o.resolvePath(cfg)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	if o.fsys != nil {
-		return o.fsys, path, nil
+		return o.fsys, path, "", nil
 	}
-	return os.DirFS(filepath.Dir(path)), filepath.Base(path), nil
+	dir := filepath.Dir(path)
+	return os.DirFS(dir), filepath.Base(path), dir, nil
 }
 
 // resolvePath applies the config-file location precedence: an explicit
@@ -251,10 +254,22 @@ func (o options) resolvePath(cfg *settings.AppConfig) (string, error) {
 }
 
 // loader carries the pipeline's injectable inputs: the fs the root config and
-// its includes are read from, and the environment.
+// its includes are read from, the OS directory that fs is rooted at (empty for
+// an injected fs) used only to render absolute paths in errors, and the
+// environment.
 type loader struct {
 	fsys fs.FS
+	root string
 	env  Env
+}
+
+// displayPath renders name as the absolute path a reader can act on: joined
+// onto the fs root for an OS-backed loader, left fs-relative for an injected fs.
+func (l *loader) displayPath(name string) string {
+	if l.root == "" {
+		return name
+	}
+	return filepath.Join(l.root, name)
 }
 
 // readAndParse reads one file and unmarshals it into a generic YAML node tree
@@ -262,6 +277,14 @@ type loader struct {
 func (l *loader) readAndParse(name string) (*yaml.Node, error) {
 	data, err := fs.ReadFile(l.fsys, name)
 	if err != nil {
+		// fs.ReadFile returns a *fs.PathError whose Path is the fs-relative
+		// name (e.g. "config.yaml"), which reads as a relative path even though
+		// the loader resolved an absolute one. Rewrite it to the absolute path
+		// so the error names the directory actually searched.
+		var pe *fs.PathError
+		if errors.As(err, &pe) {
+			pe.Path = l.displayPath(pe.Path)
+		}
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 	var doc yaml.Node
