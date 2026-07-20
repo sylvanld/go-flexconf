@@ -40,7 +40,7 @@ const (
 
 // cli holds the resolved configuration shared by every sub-command.
 type cli struct {
-	cfg   *settings.Settings
+	cfg   *settings.AppConfig
 	name  string
 	kdbx  string
 	idle  time.Duration
@@ -88,7 +88,7 @@ func WithTimeouts(idle, max time.Duration) Option {
 
 // New builds a secret-management command tree bound to cfg. Add the returned
 // command to the application's root command (or run it as a root itself).
-func New(cfg *settings.Settings, opts ...Option) *cobra.Command {
+func New(cfg *settings.AppConfig, opts ...Option) *cobra.Command {
 	c := &cli{
 		cfg:   cfg,
 		name:  defaultName,

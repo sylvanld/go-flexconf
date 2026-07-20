@@ -13,14 +13,35 @@
 // github.com/sylvanld/flexconf.
 package flexconf
 
-import "github.com/sylvanld/flexconf/internal/loader"
+import (
+	"github.com/sylvanld/flexconf/internal/loader"
+	"github.com/sylvanld/flexconf/settings"
+)
+
+// --- App context -----------------------------------------------------------
+
+// AppConfig describes an application's identity and where its config lives (the
+// app name and its config directory). It is the context handed to Load — not
+// the loaded config content, which is a Settings.
+type AppConfig = settings.AppConfig
+
+// NewAppConfig builds an AppConfig for appName. The config directory defaults to
+// the platform's per-user config dir (~/.config/<app>/ on Linux, honoring
+// XDG_CONFIG_HOME) and can be overridden with WithAppPath.
+var NewAppConfig = settings.New
+
+// WithAppPath overrides an AppConfig's config directory.
+var WithAppPath = settings.WithPath
 
 // --- Loading ---------------------------------------------------------------
 
-// Loaded is the result of the template pass: the substituted node tree and the
-// taint set of secret-sourced scalars. Decode unmarshals it into a typed
-// struct; Dump renders it back to YAML with secrets redacted.
-type Loaded = loader.Loaded
+// Settings is lazily-loaded config: a block located, templated, and
+// secret-resolved, but not yet decoded into a typed struct. LoadFile returns one
+// for a whole config file; it is also usable as a struct field, so a parent can
+// capture a child block without knowing its shape and let the owning subsystem
+// Decode it later. Dump renders it back to YAML with secrets redacted. See
+// PolymorphicSettings for blocks whose type is chosen by a discriminator field.
+type Settings = loader.Settings
 
 // Option customises a Load.
 type Option = loader.Option
@@ -51,6 +72,22 @@ const Redacted = loader.Redacted
 
 // NodeSet marks nodes of a templated tree, used for the secret taint set.
 type NodeSet = loader.NodeSet
+
+// --- Polymorphic settings --------------------------------------------------
+
+// PolymorphicSettings resolves a lazily-loaded Settings block into one of
+// several concrete types, chosen at decode time by a discriminator field in the
+// data — a config block whose shape depends on one of its own fields. I is the
+// interface every variant satisfies. Build one with NewPolymorphicSettings.
+type PolymorphicSettings[I any] = loader.PolymorphicSettings[I]
+
+// NewPolymorphicSettings builds a variant registry keyed by the discriminator
+// field (e.g. "type", or a domain-specific "engine"/"channel"). There is no
+// default — each block names its own selector. Register the variants, then
+// Decode a captured Settings into the concrete type its discriminator selects.
+func NewPolymorphicSettings[I any](discriminator string) *PolymorphicSettings[I] {
+	return loader.NewPolymorphicSettings[I](discriminator)
+}
 
 // --- Secrets ---------------------------------------------------------------
 

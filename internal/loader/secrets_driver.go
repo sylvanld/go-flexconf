@@ -42,10 +42,10 @@ func (r storeResolver) Secret(name string) (string, error) {
 }
 
 // SecretDriverFactory builds a secrets.Driver from its config sub-block. It
-// gets the resolved *settings.Settings (for defaults like
+// gets the resolved *settings.AppConfig (for defaults like
 // cfg.File("secrets.kdbx")), the driver's own opts node — already templated
 // with env+config only — and the loader Env (for the env driver / tests).
-type SecretDriverFactory func(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Driver, error)
+type SecretDriverFactory func(cfg *settings.AppConfig, opts *yaml.Node, env Env) (secrets.Driver, error)
 
 var (
 	driverMu        sync.RWMutex
@@ -94,7 +94,7 @@ func init() {
 // agentDriver builds an agent.Client at the app's socket. If no agent is
 // running it falls back to a read-only KeepassDriver at the default store
 // path, so $(secret:…) resolves whether or not the agent is up.
-func agentDriver(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Driver, error) {
+func agentDriver(cfg *settings.AppConfig, opts *yaml.Node, env Env) (secrets.Driver, error) {
 	var o struct {
 		Socket string `yaml:"socket"`
 	}
@@ -118,7 +118,7 @@ func agentDriver(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Driv
 // keepassDriver builds a KeepassDriver. It defaults to a read-only reader at
 // cfg.File("secrets.kdbx") — the right posture for a config loader, which
 // never writes and need not retain the master key.
-func keepassDriver(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Driver, error) {
+func keepassDriver(cfg *settings.AppConfig, opts *yaml.Node, env Env) (secrets.Driver, error) {
 	var o struct {
 		Path     string `yaml:"path"`
 		ReadOnly *bool  `yaml:"readonly"`
@@ -144,7 +144,7 @@ func keepassDriver(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Dr
 // envDriverFactory builds a read-only driver backed by the process
 // environment: secret:api/token reads $API_TOKEN. It gives $(secret:…) the
 // taint/redaction guarantee without a separate store.
-func envDriverFactory(_ *settings.Settings, _ *yaml.Node, env Env) (secrets.Driver, error) {
+func envDriverFactory(_ *settings.AppConfig, _ *yaml.Node, env Env) (secrets.Driver, error) {
 	if env == nil {
 		env = OSEnv{}
 	}
@@ -183,7 +183,7 @@ func envKey(name string) string {
 // execDriverFactory builds a read-only driver that shells out to a command
 // with the secret name as its final argument and reads the value from stdout —
 // covers pass, sops, vault, etc. A non-zero exit is treated as "not found".
-func execDriverFactory(_ *settings.Settings, opts *yaml.Node, _ Env) (secrets.Driver, error) {
+func execDriverFactory(_ *settings.AppConfig, opts *yaml.Node, _ Env) (secrets.Driver, error) {
 	var o struct {
 		Command []string `yaml:"command"`
 	}
@@ -218,7 +218,7 @@ func (execDriver) Delete(string) error             { return secrets.ErrReadOnly 
 
 // noneDriverFactory builds a store with no secrets: any $(secret:…) is a fatal
 // "not found". For configs that must be secret-free.
-func noneDriverFactory(_ *settings.Settings, _ *yaml.Node, _ Env) (secrets.Driver, error) {
+func noneDriverFactory(_ *settings.AppConfig, _ *yaml.Node, _ Env) (secrets.Driver, error) {
 	return noneDriver{}, nil
 }
 

@@ -10,8 +10,8 @@ const Redacted = "«redacted»"
 // dump, a debug log, an error that quotes a block) should go through here —
 // redaction is structural (the taint set), not a per-field allowlist someone
 // can forget to extend.
-func (ld *Loaded) Dump() ([]byte, error) {
-	return yaml.Marshal(redactedCopy(ld.Tree, ld.Taint))
+func (s *Settings) Dump() ([]byte, error) {
+	return yaml.Marshal(redactedCopy(s.Tree, s.Taint))
 }
 
 // redactedCopy deep-copies a node tree, masking tainted scalars.

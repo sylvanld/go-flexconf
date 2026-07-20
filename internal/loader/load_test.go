@@ -19,7 +19,7 @@ func (m mapResolver) Secret(name string) (string, error) {
 	return "", secrets.ErrNotFound
 }
 
-func newSettings(t *testing.T) *settings.Settings {
+func newSettings(t *testing.T) *settings.AppConfig {
 	t.Helper()
 	cfg, err := settings.New("example", settings.WithPath("/cfg"))
 	if err != nil {
@@ -129,6 +129,132 @@ channels:
 	}
 	if len(out.Channels) != 2 || out.Channels[0] != "telegram" {
 		t.Errorf("channels = %v, want [telegram desktop]", out.Channels)
+	}
+}
+
+// TestSettingsFieldDefersDecode pins the lazy-load-without-polymorphism case: a
+// parent captures a child block as a flexconf.Settings field without knowing its
+// shape, and the owning subsystem decodes it later — with env/secret already
+// resolved by the top-level Load.
+func TestSettingsFieldDefersDecode(t *testing.T) {
+	fsys := fstest.MapFS{
+		"config.yaml": {Data: []byte(`
+server:
+  addr: $(env:ADDR:-:8080)
+plugin:
+  kind: cache
+  ttl: $(env:TTL:-60)
+  token: $(secret:api/token)
+`)},
+	}
+	var out struct {
+		Server struct {
+			Addr string `yaml:"addr"`
+		} `yaml:"server"`
+		Plugin Settings `yaml:"plugin"` // shape unknown to the parent
+	}
+	err := Load(newSettings(t), &out,
+		WithFS(fsys), WithConfigFile("config.yaml"),
+		WithSecretResolver(mapResolver{"api/token": "s3cr3t"}),
+	)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if out.Server.Addr != ":8080" {
+		t.Errorf("server.addr = %q, want :8080", out.Server.Addr)
+	}
+	// The subsystem decodes its own slice, whenever it wants.
+	var pc struct {
+		Kind  string `yaml:"kind"`
+		TTL   int    `yaml:"ttl"`
+		Token string `yaml:"token"`
+	}
+	if err := out.Plugin.Decode(&pc); err != nil {
+		t.Fatalf("Plugin.Decode: %v", err)
+	}
+	if pc.Kind != "cache" || pc.TTL != 60 || pc.Token != "s3cr3t" {
+		t.Errorf("plugin = %+v, want {cache 60 s3cr3t}", pc)
+	}
+}
+
+// vault is the interface used by the PolymorphicSettings tests.
+type vault interface{ where() string }
+
+type keepassVault struct {
+	Path     string `yaml:"path"`
+	ReadOnly bool   `yaml:"readonly"`
+}
+
+func (k *keepassVault) where() string { return k.Path }
+
+type envVault struct {
+	Prefix string `yaml:"prefix"`
+}
+
+func (e *envVault) where() string { return e.Prefix }
+
+func TestPolymorphicSettingsSelectsVariant(t *testing.T) {
+	fsys := fstest.MapFS{
+		"config.yaml": {Data: []byte(`
+vault:
+  type: keepass
+  path: $(env:HOME)/secrets.kdbx
+  readonly: true
+`)},
+	}
+	var out struct {
+		Vault Settings `yaml:"vault"`
+	}
+	if err := Load(newSettings(t), &out,
+		WithFS(fsys), WithConfigFile("config.yaml"),
+		WithEnv(MapEnv{"HOME": "/home/u"}),
+	); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	vaults := NewPolymorphicSettings[vault]("type")
+	vaults.Register("keepass", func() vault { return &keepassVault{} })
+	vaults.Register("env", func() vault { return &envVault{} })
+
+	v, err := vaults.Decode(out.Vault)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	kv, ok := v.(*keepassVault)
+	if !ok {
+		t.Fatalf("got %T, want *keepassVault", v)
+	}
+	if kv.Path != "/home/u/secrets.kdbx" || !kv.ReadOnly {
+		t.Errorf("keepassVault = %+v, want {/home/u/secrets.kdbx true}", kv)
+	}
+}
+
+func TestPolymorphicSettingsErrors(t *testing.T) {
+	vaults := NewPolymorphicSettings[vault]("type")
+	vaults.Register("env", func() vault { return &envVault{} })
+
+	decode := func(yamlSrc string) error {
+		fsys := fstest.MapFS{"config.yaml": {Data: []byte(yamlSrc)}}
+		var out struct {
+			Vault Settings `yaml:"vault"`
+		}
+		if err := Load(newSettings(t), &out, WithFS(fsys), WithConfigFile("config.yaml")); err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		_, err := vaults.Decode(out.Vault)
+		return err
+	}
+
+	if err := decode("vault:\n  path: /x\n"); err == nil || !strings.Contains(err.Error(), `missing "type"`) {
+		t.Errorf("missing discriminator: got %v", err)
+	}
+	if err := decode("vault:\n  type: nope\n"); err == nil || !strings.Contains(err.Error(), `unknown type "nope"`) {
+		t.Errorf("unknown variant: got %v", err)
+	}
+	// Unknown field on the selected variant must fail (strict), and the
+	// discriminator itself must not count as unknown.
+	if err := decode("vault:\n  type: env\n  prefix: APP\n  bogus: 1\n"); err == nil || !strings.Contains(err.Error(), "bogus") {
+		t.Errorf("strict decode: got %v", err)
 	}
 }
 

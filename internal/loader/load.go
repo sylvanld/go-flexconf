@@ -23,10 +23,15 @@ import (
 	"github.com/sylvanld/flexconf/settings"
 )
 
-// Loaded is the result of the template pass: the substituted node tree and the
-// taint set of secret-sourced scalars. Decode unmarshals it into a typed
-// struct; Dump renders it back to YAML with secrets redacted.
-type Loaded struct {
+// Settings is a config block that has been located, templated, and
+// secret-resolved, but not yet decoded into a typed struct — lazily loaded
+// settings. It is what LoadFile returns for a whole config file, and it is also
+// usable as a struct field (via UnmarshalYAML) so a parent can capture a child
+// block without knowing its shape and let the owning subsystem Decode it later.
+// A PolymorphicSettings resolves one into a concrete type chosen by a
+// discriminator field. Decode unmarshals it into a typed struct; Dump renders it
+// back to YAML with secrets redacted.
+type Settings struct {
 	Tree  *yaml.Node
 	Taint NodeSet
 }
@@ -34,11 +39,22 @@ type Loaded struct {
 // Decode unmarshals the templated tree into out (a pointer to the app's config
 // struct). The loader-owned `secrets` block has already been removed, so it
 // never leaks into the application schema.
-func (ld *Loaded) Decode(out any) error {
-	if ld.Tree == nil {
+func (s *Settings) Decode(out any) error {
+	if s == nil || s.Tree == nil {
 		return errors.New("flexconf: nothing to decode")
 	}
-	return ld.Tree.Decode(out)
+	return s.Tree.Decode(out)
+}
+
+// UnmarshalYAML lets a Settings be a field of another struct: it captures the
+// (already-templated) node verbatim instead of decoding it, deferring the typed
+// decode to whoever owns the block. The captured node carries no taint set, so
+// redaction is a top-level concern — Dump on a nested Settings does not redact;
+// dump the whole config from the LoadFile result instead.
+func (s *Settings) UnmarshalYAML(n *yaml.Node) error {
+	s.Tree = n
+	s.Taint = NodeSet{}
+	return nil
 }
 
 // options carries Load's injectable inputs.
@@ -106,7 +122,7 @@ func WithFS(fsys fs.FS) Option {
 
 // Load resolves the config file, reads/parses/templates it, and unmarshals the
 // result into out. It is LoadFile followed by Decode.
-func Load(cfg *settings.Settings, out any, opts ...Option) error {
+func Load(cfg *settings.AppConfig, out any, opts ...Option) error {
 	ld, err := LoadFile(cfg, opts...)
 	if err != nil {
 		return err
@@ -117,7 +133,7 @@ func Load(cfg *settings.Settings, out any, opts ...Option) error {
 // LoadFile runs the locate→read→parse→template pipeline and returns the
 // templated tree plus its taint set, without decoding. Use it when you also
 // need Dump (redacted rendering) or want to decode strictly yourself.
-func LoadFile(cfg *settings.Settings, opts ...Option) (*Loaded, error) {
+func LoadFile(cfg *settings.AppConfig, opts ...Option) (*Settings, error) {
 	o := options{env: OSEnv{}}
 	for _, opt := range opts {
 		opt(&o)
@@ -137,12 +153,12 @@ func LoadFile(cfg *settings.Settings, opts ...Option) (*Loaded, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Loaded{Tree: tree, Taint: taint}, nil
+	return &Settings{Tree: tree, Taint: taint}, nil
 }
 
 // rootFS resolves the config path (option → <APP>_CONFIG → cfg default) and
 // returns the fs to read from plus the fs-relative name of the root file.
-func (o options) rootFS(cfg *settings.Settings) (fs.FS, string, error) {
+func (o options) rootFS(cfg *settings.AppConfig) (fs.FS, string, error) {
 	path, err := o.resolvePath(cfg)
 	if err != nil {
 		return nil, "", err
@@ -154,7 +170,7 @@ func (o options) rootFS(cfg *settings.Settings) (fs.FS, string, error) {
 }
 
 // resolvePath applies the config-file location precedence.
-func (o options) resolvePath(cfg *settings.Settings) (string, error) {
+func (o options) resolvePath(cfg *settings.AppConfig) (string, error) {
 	if o.configFile != "" {
 		return o.configFile, nil
 	}
@@ -195,7 +211,7 @@ func (l *loader) readAndParse(name string) (*yaml.Node, error) {
 // block env-only, build the resolver from it, template the rest of the tree
 // against that resolver, then strip the loader-owned secrets block from the
 // tree before it is handed to the app's decoder.
-func (l *loader) run(cfg *settings.Settings, root *yaml.Node, file string, o options) (*yaml.Node, NodeSet, error) {
+func (l *loader) run(cfg *settings.AppConfig, root *yaml.Node, file string, o options) (*yaml.Node, NodeSet, error) {
 	secretsNode := mappingValue(root, "secrets")
 	if secretsNode != nil {
 		bt := &templater{l: l, allowSecret: false, stack: []string{file}, tainted: NodeSet{}}
@@ -231,7 +247,7 @@ func (l *loader) run(cfg *settings.Settings, root *yaml.Node, file string, o opt
 
 // buildResolver selects the $(secret:…) resolver: an injected resolver/store
 // wins, then the `secrets` block's driver, then the zero-config default.
-func (l *loader) buildResolver(cfg *settings.Settings, secretsNode *yaml.Node, o options) (SecretResolver, error) {
+func (l *loader) buildResolver(cfg *settings.AppConfig, secretsNode *yaml.Node, o options) (SecretResolver, error) {
 	if o.resolver != nil {
 		return o.resolver, nil
 	}

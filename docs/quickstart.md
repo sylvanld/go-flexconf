@@ -13,17 +13,16 @@ Full reference: [`docs/specs/settings.md`](specs/settings.md) and
 go get github.com/sylvanld/flexconf
 ```
 
-The toolkit is three cooperating packages plus a façade:
+Three concepts, all reachable from the one `github.com/sylvanld/flexconf` import:
 
-| Package | Responsibility |
-| --- | --- |
-| `settings` | *Where* config lives — resolves `~/.config/<app>/` and joins file paths. Stdlib only. |
-| `secrets` | *How* secrets are stored — a `Store` over pluggable `Driver`s (keepass, agent, …). |
-| `flexconf` | *Loading* — reads, templates (`$(env:…)`, `$(secret:…)`, `$(config:…)`), and decodes into your struct. |
+| Concept | Type | What it is |
+| --- | --- | --- |
+| **App context** | `flexconf.AppConfig` | *Where* config lives — the app name and its config dir (`~/.config/<app>/`). Built with `flexconf.NewAppConfig`. |
+| **Loaded settings** | `flexconf.Settings` | *What* was loaded — a block located, templated, and secret-resolved, decoded into your struct on demand. |
+| **Secrets** | `secrets.Store` | *How* secrets are stored — a store over pluggable drivers (keepass, agent, …). |
 
-You import one path — `github.com/sylvanld/flexconf` — and reach the loader as
-`flexconf.Load`. The implementation lives in `internal/loader`; the root package
-is a thin re-export.
+You import one path and reach the loader as `flexconf.Load`. The implementation
+lives in `internal/loader`; the root package is a thin re-export.
 
 ## 1. Define your config struct
 
@@ -52,20 +51,22 @@ as a number — the struct is exactly what you'd write for any `yaml.Unmarshal`.
 > declare a small type with an `UnmarshalYAML` that calls `time.ParseDuration` —
 > that's a normal Go type in *your* package, not something flexconf imposes.
 
-## 2. Resolve the settings directory
+## 2. Build the app context
 
-`settings.New` gives you the app's config directory — `~/.config/<app>/` by
-default (honoring `XDG_CONFIG_HOME`; the platform config dir elsewhere).
+`flexconf.NewAppConfig` gives you an `AppConfig`: the app's name and its config
+directory — `~/.config/<app>/` by default (honoring `XDG_CONFIG_HOME`; the
+platform config dir elsewhere).
 
 ```go
-cfg, err := settings.New("myapp")
+cfg, err := flexconf.NewAppConfig("myapp")
 if err != nil {
 	return err
 }
 ```
 
 `cfg.File("config.yaml")` → `~/.config/myapp/config.yaml`. Override the
-directory in tests or one-offs with `settings.New("myapp", settings.WithPath("/some/dir"))`.
+directory in tests or one-offs with
+`flexconf.NewAppConfig("myapp", flexconf.WithAppPath("/some/dir"))`.
 
 ## 3. Load
 
@@ -207,6 +208,74 @@ if err := loaded.Decode(&c); err != nil {
 Redaction is structural (the taint set), not a field allowlist — you can't
 forget to mark a new secret field.
 
+## 7. Blocks whose shape you don't know up front
+
+Sometimes a parent struct can't statically declare a child block's shape —
+either the owning subsystem should decode its own slice, or the shape depends on
+a field *inside* the block. Declare the field as `flexconf.Settings`: `Load`
+locates, templates, and secret-resolves it like everything else, but leaves it
+undecoded until you ask.
+
+**Deferred decode** — the parent doesn't know (or care about) the shape; the
+subsystem decodes it later:
+
+```go
+type Config struct {
+	Server ServerConfig      `yaml:"server"`
+	Plugin flexconf.Settings `yaml:"plugin"` // captured raw
+}
+
+// Elsewhere — the plugin owns its schema:
+var pc PluginConfig
+if err := c.Plugin.Decode(&pc); err != nil {
+	return err
+}
+```
+
+**Polymorphic decode** — the block is one of several types, chosen by one of its
+own fields. A `PolymorphicSettings` registry maps that field's value to the
+concrete type:
+
+```yaml
+vault:
+  type: keepass          # <- the discriminator picks the shape
+  path: ~/.config/myapp/secrets.kdbx
+  readonly: true
+```
+
+```go
+type Vault interface{ Open() (*Store, error) }
+
+type KeepassVault struct {
+	Path     string `yaml:"path"`
+	ReadOnly bool   `yaml:"readonly"`
+}
+type EnvVault struct {
+	Prefix string `yaml:"prefix"`
+}
+
+// Register the variants once; the discriminator field is explicit (no default).
+var vaults = flexconf.NewPolymorphicSettings[Vault]("type")
+
+func init() {
+	vaults.Register("keepass", func() Vault { return &KeepassVault{} })
+	vaults.Register("env",     func() Vault { return &EnvVault{} })
+}
+
+type Config struct {
+	Vault flexconf.Settings `yaml:"vault"`
+}
+
+// After Load:
+v, err := vaults.Decode(c.Vault) // *KeepassVault or *EnvVault
+```
+
+The discriminator (`type` here — use whatever field fits your domain, e.g.
+`engine`, `channel`) is stripped before the remaining keys decode **strictly**,
+so a variant struct declares only its own fields and an unknown key is an error.
+This is the same tagged-union mechanism the built-in `secrets:` block uses to
+select its driver, made reusable for your own config.
+
 ## Choosing the config file
 
 `Load` locates the config file with this precedence:
@@ -249,7 +318,6 @@ import (
 
 	"github.com/sylvanld/flexconf"
 	clisecrets "github.com/sylvanld/flexconf/cli/secrets"
-	"github.com/sylvanld/flexconf/settings"
 )
 
 type Config struct {
@@ -269,7 +337,7 @@ func main() {
 }
 
 func run() error {
-	cfg, err := settings.New("myapp")
+	cfg, err := flexconf.NewAppConfig("myapp")
 	if err != nil {
 		return err
 	}
