@@ -30,8 +30,20 @@ type AppConfig = settings.AppConfig
 // XDG_CONFIG_HOME) and can be overridden with WithAppPath.
 var NewAppConfig = settings.New
 
-// WithAppPath overrides an AppConfig's config directory.
+// WithAppPath overrides an AppConfig's config directory, outranking <APP>_CONFIG.
 var WithAppPath = settings.WithPath
+
+// WithAppEnv injects the environment the <APP>_CONFIG directory lookup reads.
+var WithAppEnv = settings.WithEnv
+
+// AppEnvVar returns the environment variable naming an app's config *directory*
+// — e.g. MYAPP_CONFIG for "myapp". It never names a file: the main config file
+// is always ConfigFileName inside that directory.
+var AppEnvVar = settings.EnvVar
+
+// ConfigFileName is the main config file, always this name relative to the
+// settings directory.
+const ConfigFileName = loader.ConfigFileName
 
 // --- Loading ---------------------------------------------------------------
 
@@ -41,7 +53,17 @@ var WithAppPath = settings.WithPath
 // capture a child block without knowing its shape and let the owning subsystem
 // Decode it later. Dump renders it back to YAML with secrets redacted. See
 // PolymorphicSettings for blocks whose type is chosen by a discriminator field.
+//
+// A Settings may carry a default (see Defaults) that a loaded block decodes
+// over, so an omitted or partial block still yields fully-populated settings.
 type Settings = loader.Settings
+
+// Defaults builds a Settings whose fallback tree is v — a pre-populated Go value
+// — marshalled to YAML. Assign it to a field of a default config struct so the
+// block has a shape even when the config file omits it; loading decodes the
+// file's keys on top, per key. Marshalling that struct renders the defaults,
+// which is what the `settings init` command writes.
+var Defaults = loader.Defaults
 
 // Option customises a Load.
 type Option = loader.Option
@@ -85,6 +107,12 @@ type PolymorphicSettings[I any] = loader.PolymorphicSettings[I]
 // field (e.g. "type", or a domain-specific "engine"/"channel"). There is no
 // default — each block names its own selector. Register the variants, then
 // Decode a captured Settings into the concrete type its discriminator selects.
+//
+// A variant's factory returning a pre-populated value declares that variant's
+// defaults: Decode decodes the block over it, so the block overrides only the
+// keys it names. SetDefault additionally names the variant a block omitting the
+// discriminator resolves to, and DefaultSettings renders that variant as a
+// complete block for `settings init`.
 func NewPolymorphicSettings[I any](discriminator string) *PolymorphicSettings[I] {
 	return loader.NewPolymorphicSettings[I](discriminator)
 }

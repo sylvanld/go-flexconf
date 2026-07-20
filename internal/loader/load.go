@@ -23,6 +23,11 @@ import (
 	"github.com/sylvanld/go-flexconf/settings"
 )
 
+// ConfigFileName is the application's main config file. It is always this name
+// relative to the settings directory: relocating config means pointing
+// <APP>_CONFIG at a different directory, not naming a different file.
+const ConfigFileName = "config.yaml"
+
 // Settings is a config block that has been located, templated, and
 // secret-resolved, but not yet decoded into a typed struct — lazily loaded
 // settings. It is what LoadFile returns for a whole config file, and it is also
@@ -31,30 +36,88 @@ import (
 // A PolymorphicSettings resolves one into a concrete type chosen by a
 // discriminator field. Decode unmarshals it into a typed struct; Dump renders it
 // back to YAML with secrets redacted.
+//
+// A Settings may also carry a Default: the block's fallback shape, built from a
+// pre-populated Go value with Defaults. Decode applies the default first and the
+// loaded tree over it, so a config that omits the block — or names only some of
+// its keys — still yields fully-populated settings.
 type Settings struct {
 	Tree  *yaml.Node
 	Taint NodeSet
+
+	// Default is the block's fallback tree, decoded under Tree. It is set by
+	// Defaults and survives UnmarshalYAML, so a pre-populated parent struct
+	// keeps its defaults even where the config supplies the block.
+	Default *yaml.Node
+}
+
+// Defaults builds a Settings whose Default tree is v marshalled to YAML — the
+// declared fallback for a block. Assign it to a field of a pre-populated config
+// struct so the block has a shape even when the config file omits it:
+//
+//	func defaultConfig() *Config {
+//	    return &Config{Vault: flexconf.Defaults(&KeepassVault{Readonly: true})}
+//	}
+//
+// Marshalling that struct renders the defaults (what `settings init` writes);
+// loading over it decodes the file's keys on top of them.
+func Defaults(v any) Settings {
+	var n yaml.Node
+	if err := n.Encode(v); err != nil {
+		// Encode only fails on a value YAML cannot represent — a programming
+		// error in the app's default, not a runtime condition. Fail loud, in
+		// keeping with the registry panics elsewhere in the toolkit.
+		panic(fmt.Sprintf("flexconf: encoding default settings: %v", err))
+	}
+	return Settings{Default: &n}
 }
 
 // Decode unmarshals the templated tree into out (a pointer to the app's config
 // struct). The loader-owned `secrets` block has already been removed, so it
 // never leaks into the application schema.
+//
+// Any Default decodes first, then the loaded tree over it. yaml leaves fields a
+// document does not mention untouched, so the result is a per-key merge: the
+// file overrides what it names and inherits the rest.
 func (s *Settings) Decode(out any) error {
-	if s == nil || s.Tree == nil {
+	if s == nil || (s.Tree == nil && s.Default == nil) {
 		return errors.New("flexconf: nothing to decode")
+	}
+	if s.Default != nil {
+		if err := s.Default.Decode(out); err != nil {
+			return fmt.Errorf("flexconf: decoding default settings: %w", err)
+		}
+	}
+	if s.Tree == nil {
+		return nil
 	}
 	return s.Tree.Decode(out)
 }
 
 // UnmarshalYAML lets a Settings be a field of another struct: it captures the
 // (already-templated) node verbatim instead of decoding it, deferring the typed
-// decode to whoever owns the block. The captured node carries no taint set, so
-// redaction is a top-level concern — Dump on a nested Settings does not redact;
-// dump the whole config from the LoadFile result instead.
+// decode to whoever owns the block. Any Default already on the field is kept, so
+// the captured block still decodes over its declared fallback. The captured node
+// carries no taint set, so redaction is a top-level concern — Dump on a nested
+// Settings does not redact; dump the whole config from the LoadFile result
+// instead.
 func (s *Settings) UnmarshalYAML(n *yaml.Node) error {
 	s.Tree = n
 	s.Taint = NodeSet{}
 	return nil
+}
+
+// MarshalYAML renders the block as its loaded tree, or as its Default when
+// nothing has been loaded. It is what lets a whole pre-populated config struct
+// marshal straight to a default config file.
+func (s Settings) MarshalYAML() (any, error) {
+	if s.Tree != nil {
+		return s.Tree, nil
+	}
+	if s.Default != nil {
+		return s.Default, nil
+	}
+	return nil, nil
 }
 
 // options carries Load's injectable inputs.
@@ -169,7 +232,14 @@ func (o options) rootFS(cfg *settings.AppConfig) (fs.FS, string, error) {
 	return os.DirFS(filepath.Dir(path)), filepath.Base(path), nil
 }
 
-// resolvePath applies the config-file location precedence.
+// resolvePath applies the config-file location precedence: an explicit
+// WithConfigFile, otherwise config.yaml inside the app's settings directory.
+//
+// The loader deliberately reads no environment variable of its own here. The
+// settings directory — including its <APP>_CONFIG override — is resolved once,
+// by settings.New, and the main config file is always config.yaml relative to
+// it. Two independent resolvers reading one variable is what made <APP>_CONFIG
+// mean a directory to settings and a file to the loader.
 func (o options) resolvePath(cfg *settings.AppConfig) (string, error) {
 	if o.configFile != "" {
 		return o.configFile, nil
@@ -177,10 +247,7 @@ func (o options) resolvePath(cfg *settings.AppConfig) (string, error) {
 	if cfg == nil {
 		return "", errors.New("flexconf: no config file and no settings supplied")
 	}
-	if v, ok := o.env.Lookup(envKey(cfg.AppName()) + "_CONFIG"); ok && v != "" {
-		return v, nil
-	}
-	return cfg.File("config.yaml"), nil
+	return cfg.File(ConfigFileName), nil
 }
 
 // loader carries the pipeline's injectable inputs: the fs the root config and

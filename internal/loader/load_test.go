@@ -363,22 +363,52 @@ func TestIncludeCycleIsFatal(t *testing.T) {
 	}
 }
 
-func TestConfigPathFromAppEnv(t *testing.T) {
-	fsys := fstest.MapFS{"custom.yaml": {Data: []byte("name: viaenv\n")}}
+// <APP>_CONFIG names the config *directory*; the file is always config.yaml
+// inside it. The loader reads no environment variable of its own for this — the
+// directory is resolved once by settings.New and flows through cfg.File.
+func TestConfigPathFromAppEnvDir(t *testing.T) {
+	fsys := fstest.MapFS{"custom/config.yaml": {Data: []byte("name: viaenv\n")}}
+
+	cfg, err := settings.New("example", settings.WithEnv(MapEnv{"EXAMPLE_CONFIG": "custom"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cfg.File("config.yaml"), "custom/config.yaml"; got != want {
+		t.Fatalf("cfg.File = %q, want %q", got, want)
+	}
+
 	var out struct {
 		Name string `yaml:"name"`
 	}
-	// No WithConfigFile: path comes from EXAMPLE_CONFIG.
-	err := Load(newSettings(t), &out,
-		WithFS(fsys),
-		WithEnv(MapEnv{"EXAMPLE_CONFIG": "custom.yaml"}),
-		WithSecretResolver(mapResolver{}),
-	)
-	if err != nil {
+	// No WithConfigFile: the path comes from the env-resolved directory.
+	if err := Load(cfg, &out, WithFS(fsys), WithSecretResolver(mapResolver{})); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if out.Name != "viaenv" {
 		t.Errorf("name = %q, want viaenv", out.Name)
+	}
+}
+
+// A stray <APP>_CONFIG must not steer the loader when the app pinned its
+// directory explicitly — WithPath outranks the environment.
+func TestExplicitAppPathOutranksEnv(t *testing.T) {
+	fsys := fstest.MapFS{"pinned/config.yaml": {Data: []byte("name: pinned\n")}}
+
+	cfg, err := settings.New("example",
+		settings.WithPath("pinned"),
+		settings.WithEnv(MapEnv{"EXAMPLE_CONFIG": "elsewhere"}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out struct {
+		Name string `yaml:"name"`
+	}
+	if err := Load(cfg, &out, WithFS(fsys), WithSecretResolver(mapResolver{})); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if out.Name != "pinned" {
+		t.Errorf("name = %q, want pinned", out.Name)
 	}
 }
 
