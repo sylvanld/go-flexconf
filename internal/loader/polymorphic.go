@@ -26,9 +26,14 @@ import (
 // The discriminator field is stripped before the remaining keys decode
 // (strictly — an unknown key is an error), so variant structs declare only their
 // own fields, never the discriminator.
+// A registry may also name a default variant with SetDefault. The factory a
+// variant registers returns a *fresh* target, so a factory that returns a
+// pre-populated value declares that variant's defaults: Decode decodes the
+// block's keys over it, leaving whatever the block does not mention.
 type PolymorphicSettings[I any] struct {
 	discriminator string
 	factories     map[string]func() I
+	fallback      string // discriminator value used when the block names none
 }
 
 // NewPolymorphicSettings builds a registry keyed by the discriminator field.
@@ -53,26 +58,91 @@ func (p *PolymorphicSettings[I]) Register(name string, factory func() I) *Polymo
 	return p
 }
 
+// SetDefault names the variant used when a block omits the discriminator, or is
+// absent entirely. It panics if name was never registered — a default naming a
+// variant that does not exist is a wiring bug, caught at startup rather than at
+// the first load. Returns the registry so it can chain after Register.
+func (p *PolymorphicSettings[I]) SetDefault(name string) *PolymorphicSettings[I] {
+	if _, ok := p.factories[name]; !ok {
+		panic(fmt.Sprintf("flexconf: default %s %q is not registered (known: %v)", p.discriminator, name, p.known()))
+	}
+	p.fallback = name
+	return p
+}
+
+// Default returns a fresh instance of the default variant, fully populated by
+// its factory — the variant's declared defaults, with nothing decoded over
+// them. It reports an error if no default variant has been set.
+func (p *PolymorphicSettings[I]) Default() (I, error) {
+	var zero I
+	if p.fallback == "" {
+		return zero, fmt.Errorf("flexconf: no default %s set (known: %v)", p.discriminator, p.known())
+	}
+	return p.factories[p.fallback](), nil
+}
+
+// DefaultSettings renders the default variant as a Settings whose Default tree
+// is the variant's values plus the discriminator naming it. That is the block a
+// `settings init` writes for a polymorphic field: a complete, re-loadable
+// starting point rather than an empty stub.
+func (p *PolymorphicSettings[I]) DefaultSettings() (Settings, error) {
+	v, err := p.Default()
+	if err != nil {
+		return Settings{}, err
+	}
+	s := Defaults(v)
+	if s.Default.Kind != yaml.MappingNode {
+		return Settings{}, fmt.Errorf("flexconf: default %s %q must marshal to a mapping", p.discriminator, p.fallback)
+	}
+	s.Default = withDiscriminator(s.Default, p.discriminator, p.fallback)
+	return s, nil
+}
+
 // Decode reads the discriminator from s, selects the registered factory, and
 // strictly decodes the block's remaining fields into the concrete value it
-// yields. The discriminator field is not passed to the variant. A missing
-// discriminator, an unregistered value, or an unknown field is an error.
+// yields. The discriminator field is not passed to the variant. Because the
+// factory's value is decoded *onto*, a pre-populated factory supplies that
+// variant's defaults for every key the block leaves out.
+//
+// A block that omits the discriminator — or a Settings with nothing loaded at
+// all — resolves to the variant named by SetDefault; without one, that is an
+// error. An unregistered discriminator value or an unknown field is always an
+// error.
 func (p *PolymorphicSettings[I]) Decode(s Settings) (I, error) {
 	var zero I
-	if s.Tree == nil || s.Tree.Kind != yaml.MappingNode {
+	tree := s.Tree
+	if tree == nil {
+		tree = s.Default
+	}
+	if tree == nil {
+		return p.Default()
+	}
+	if tree.Kind != yaml.MappingNode {
 		return zero, fmt.Errorf("flexconf: polymorphic block must be a mapping with a %q field", p.discriminator)
 	}
-	disc := mappingValue(s.Tree, p.discriminator)
-	if disc == nil || disc.Value == "" {
+
+	name := p.fallback
+	if disc := mappingValue(tree, p.discriminator); disc != nil && disc.Value != "" {
+		name = disc.Value
+	}
+	if name == "" {
 		return zero, fmt.Errorf("flexconf: missing %q to select a variant (known: %v)", p.discriminator, p.known())
 	}
-	factory, ok := p.factories[disc.Value]
+	factory, ok := p.factories[name]
 	if !ok {
-		return zero, fmt.Errorf("flexconf: unknown %s %q (known: %v)", p.discriminator, disc.Value, p.known())
+		return zero, fmt.Errorf("flexconf: unknown %s %q (known: %v)", p.discriminator, name, p.known())
 	}
+
 	target := factory()
-	if err := strictDecode(withoutKey(s.Tree, p.discriminator), target); err != nil {
-		return zero, fmt.Errorf("flexconf: decoding %s %q: %w", p.discriminator, disc.Value, err)
+	// A default tree under a loaded one decodes first, so the block overrides
+	// only the keys it names — matching Settings.Decode's merge semantics.
+	if s.Tree != nil && s.Default != nil && s.Default.Kind == yaml.MappingNode {
+		if err := strictDecode(withoutKey(s.Default, p.discriminator), target); err != nil {
+			return zero, fmt.Errorf("flexconf: decoding default %s %q: %w", p.discriminator, name, err)
+		}
+	}
+	if err := strictDecode(withoutKey(tree, p.discriminator), target); err != nil {
+		return zero, fmt.Errorf("flexconf: decoding %s %q: %w", p.discriminator, name, err)
 	}
 	return target, nil
 }
@@ -85,6 +155,17 @@ func (p *PolymorphicSettings[I]) known() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// withDiscriminator returns a copy of a mapping node carrying key: value as its
+// first entry — the discriminator a variant's own struct never declares, put
+// back so the rendered block names the variant it decodes to.
+func withDiscriminator(n *yaml.Node, key, value string) *yaml.Node {
+	out := *withoutKey(n, key)
+	kn := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}
+	vn := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
+	out.Content = append([]*yaml.Node{kn, vn}, out.Content...)
+	return &out
 }
 
 // withoutKey returns a shallow copy of a mapping node with key removed, leaving

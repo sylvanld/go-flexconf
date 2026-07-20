@@ -1,31 +1,139 @@
 # flexconf
 
-A small Go toolkit for application configuration: a **settings** package that
+A Go toolkit for application configuration. Its centerpiece is a **config
+loader** that turns a templated YAML file into your own typed struct, resolving
+`$(env:…)`, `$(secret:…)` and `$(config:…)` references against a parsed node
+tree — never raw text — and tracking secret-sourced values so any config dump
+redacts them.
+
+Around it sit the pieces that make that practical: a **settings** package that
 resolves where an app keeps its config, a **secrets** store backed by a
 password-protected KeePass (`.kdbx`) database, an **agent** that holds an
 unlocked store for a few minutes so a single unlock covers repeated CLI calls,
-and a **secretcli** factory that drops the whole secret manager into any app's
-own [cobra](https://github.com/spf13/cobra) command tree.
+and two ready-made [cobra](https://github.com/spf13/cobra) command trees that
+drop the secret manager and the config-file generator into any app's own CLI.
+
+```sh
+go get github.com/sylvanld/go-flexconf
+```
+
+**New here? Start with the [quickstart](docs/quickstart.md).** Per-component
+behaviour specs live in [`docs/specs/`](docs/specs/README.md).
+
+## The loader
+
+The root package `github.com/sylvanld/go-flexconf` is a flat façade over
+`internal/loader`, so one import reaches everything.
+
+```go
+cfg, err := flexconf.NewAppConfig("myapp")   // ~/.config/myapp/
+var c Config
+err = flexconf.Load(cfg, &c)                 // locate → read → parse → template → decode
+```
+
+```yaml
+# ~/.config/myapp/config.yaml
+http:
+  base_url: $(env:BASE_URL:-https://api.example.com)
+  port: $(env:PORT:-8080)          # decodes into an int
+  token: $(secret:api/token)
+logging: $(config:logging.yaml)    # splices in another file
+```
+
+`Config` is a plain struct with `yaml` tags and native Go types — no wrapper
+types. Templating happens on the parsed tree, so an injected value can never
+change the document's structure.
+
+| Member | Description |
+| --- | --- |
+| `NewAppConfig(name, ...)` / `WithAppPath(p)` | Build the app context (re-exports `settings.New` / `WithPath`). |
+| `Load(cfg, out, ...Option)` | Full pipeline, decoding into `out`. |
+| `LoadFile(cfg, ...Option)` | Same, stopping before decode; returns a `Settings`. |
+| `Settings` | A located, templated, secret-resolved block, decoded on demand. |
+| `Defaults(v)` | A `Settings` whose fallback tree is a pre-populated value. |
+| `PolymorphicSettings[I]` / `NewPolymorphicSettings` | Pick a block's concrete type from a discriminator field. |
+| `RegisterSecretDriver(name, factory)` | Add a `$(secret:…)` backend. |
+| `Redacted` | What a secret-sourced scalar renders as in a dump. |
+
+Options: `WithConfigFile`, `WithEnv`, `WithFS`, `WithSecretStore`,
+`WithSecretResolver` — every input is injectable, so tests never touch the real
+filesystem, environment, or secret store.
+
+### Choosing the config file
+
+1. `flexconf.WithConfigFile("/path/config.yaml")` — explicit override.
+2. `cfg.File("config.yaml")` — always that name, under the config directory.
+
+The config **directory** is what moves, and it is resolved once, by
+`NewAppConfig`: `WithAppPath` → `<APP>_CONFIG` (uppercased app name,
+non-alphanumerics → `_`) → `~/.config/<app>/`. So `<APP>_CONFIG` names a
+directory, never a file, and everything derived from it relocates as a unit:
+
+```sh
+MYAPP_CONFIG=/etc/myapp   →  /etc/myapp/config.yaml
+                             /etc/myapp/secrets.kdbx
+```
+
+### Defaults
+
+Declare defaults as a pre-populated value of your own config type — it is
+type-checked against the struct it defaults, so it cannot drift the way a
+parallel YAML blob or a second set of struct tags does. Pass it to `Load` and
+the file overrides only the keys it names:
+
+```go
+c := defaultConfig().(*Config)
+err := flexconf.Load(cfg, c)   // config.yaml wins per key
+```
+
+Lazily-decoded blocks carry their default via `flexconf.Defaults(&HTTPConfig{…})`;
+polymorphic ones via a factory returning a pre-populated variant.
+
+### Redaction
+
+Secret-sourced values are tainted through the whole pipeline, structurally
+rather than by field allowlist, so you cannot forget to mark a new secret field:
+
+```go
+loaded, err := flexconf.LoadFile(cfg)
+dump, _ := loaded.Dump()       // token: "«redacted»"
+err = loaded.Decode(&c)
+```
+
+### Where `$(secret:…)` resolves
+
+In precedence order: an injected `*secrets.Store` (`WithSecretStore`), a
+`secrets:` block in the config file (templated env-only, and stripped before
+your struct decodes), or — with neither — the zero-config **agent → read-only
+keepass** default. Built-in drivers: `agent`, `keepass`, `env`, `exec`, `none`.
 
 ## Packages
 
 ### `settings`
 
-Resolves an application's settings directory.
+Resolves an application's settings directory. `AppConfig` is the *app context*
+(where config lives), as distinct from `flexconf.Settings` (what was loaded).
 
 ```go
-cfg, err := settings.New("flexconf")            // ~/.config/flexconf/
+cfg, err := settings.New("flexconf")            // WithPath → FLEXCONF_CONFIG → ~/.config/flexconf/
 cfg, err := settings.New("flexconf",            // explicit override
 	settings.WithPath("/etc/flexconf"))
 ```
 
+- Resolution order: `WithPath` → `<APP>_CONFIG` → `DefaultPath(appName)`.
 - Default path comes from `os.UserConfigDir()` → `<user-config-dir>/<app_name>`
   (`~/.config/<app_name>/` on Linux, honoring `XDG_CONFIG_HOME`).
-- `WithPath("")` is a no-op, so an unset override never clobbers the default.
+- `WithPath("")` and an empty `<APP>_CONFIG` are no-ops, so an unset override
+  never clobbers the resolution below it.
+- The directory is resolved **exactly once**, here. Nothing else re-derives it
+  from the environment, which is what keeps `config.yaml` and `secrets.kdbx`
+  moving together.
 
 | Member | Description |
 | --- | --- |
-| `New(appName, ...Option)` | Build settings; errors with `ErrEmptyAppName` on empty name. |
+| `New(appName, ...Option)` | Build an `*AppConfig`; errors with `ErrEmptyAppName` on empty name. |
+| `WithPath(p)` / `WithEnv(env)` | Override the directory; inject the environment the `<APP>_CONFIG` lookup reads. |
+| `EnvVar(appName)` | The variable naming the config dir — `MY_APP_CONFIG` for `my-app`. |
 | `DefaultPath(appName)` | Package-level default path resolver. |
 | `AppName()` / `Path()` | The app name and the resolved settings directory. |
 | `DefaultPath()` / `IsDefault()` | The default path, and whether it is in use. |
@@ -113,29 +221,63 @@ host, prefer an OS keyring (Secret Service / `gpg-agent`) over this bespoke agen
 `secrets.KeepassDriver` `ReadOnly` mode and keep writes out of the agent — the
 opposite convenience/safety trade.)
 
-### `secretcli`
+## Command trees
 
-A factory that builds the whole secret manager as a cobra command tree, ready to
-mount as a sub-command of any application's CLI. It wires `settings` + `secrets`
-+ `agent` together for you, so the KeePass file, socket, and agent log all live
-under the app's own config directory.
+Two factories return a `*cobra.Command` ready to mount as a sub-command of any
+application's CLI. Each takes the app's resolved `*settings.AppConfig`, so the
+config file, KeePass file, socket, and agent log all live under the app's own
+config directory.
 
 ```go
-cfg, _ := settings.New("myapp")             // ~/.config/myapp/
+import (
+	clisecrets  "github.com/sylvanld/go-flexconf/cli/secrets"
+	settingscli "github.com/sylvanld/go-flexconf/cli/settings"
+)
+
+cfg, _ := settings.New("myapp")                       // ~/.config/myapp/
 root := &cobra.Command{Use: "myapp"}
-root.AddCommand(secretcli.New(cfg))         // adds "myapp secrets ..."
+root.AddCommand(clisecrets.New(cfg))                  // adds "myapp secrets ..."
+root.AddCommand(settingscli.New(cfg, defaultConfig))  // adds "myapp settings ..."
 root.Execute()
 ```
 
-The factory takes the app's resolved `*settings.Settings`; options adapt it:
+Both packages are named after their directory (`cli/secrets` is `package
+secrets`, `cli/settings` is `package settings`), so import them under an alias
+when the `secrets` or `settings` library packages are also in scope.
+
+### `cli/settings` — writing the config file
+
+The other half of the loading story: the loader reads a config file, this writes
+the first one. `init` renders the application's declared defaults — a fresh,
+fully-populated instance of its own config struct, supplied as a `func() any` —
+to the file the loader reads, so a new install starts from a complete, valid,
+re-loadable document. Building the defaults per invocation keeps them immune to
+mutation by anything that decoded over them earlier.
+
+```
+<name>                       (default: settings)
+├── init [--force]           write the default config file (refuses to clobber)
+└── path                     print the config file path
+```
+
+| Option | Effect |
+| --- | --- |
+| `WithName("config")` | Rename the top-level command (default `settings`). |
+| `WithConfigPath(path)` | Relocate the file written by `init` (default `<settings-dir>/config.yaml`). |
+
+The file is written `0600` — a config file is a natural home for credentials,
+and `$(secret:…)` templating means one may hold resolved values. What `init`
+writes always round-trips back through `Load` to the same values.
+
+### `cli/secrets` — the secret manager
+
+Wires `settings` + `secrets` + `agent` together into a full secret manager.
 
 | Option | Effect |
 | --- | --- |
 | `WithName("vault")` | Rename the top-level command (default `secrets`). |
 | `WithKdbxPath(path)` | Relocate the store (default `<settings-dir>/secrets.kdbx`). |
 | `WithTimeouts(idle, max)` | Change the agent idle timeout / absolute lifetime. |
-
-The command tree:
 
 ```
 <name>                       (default: secrets)
@@ -163,7 +305,34 @@ The command tree:
 ## Example app
 
 [`cmd/example`](cmd/example/main.go) is a minimal cobra app that mounts
-`secretcli.New(cfg)` under `example secrets`:
+`clisecrets.New(cfg)` under `example secrets` and `settingscli.New(cfg, defaultConfig)`
+under `example settings`. It also shows how to declare defaults for a nested
+`flexconf.Settings` block and for a polymorphic `vault` block whose shape is
+chosen by its own `type` field.
+
+`settings init` writes the app's declared defaults to the file the loader reads,
+so a fresh install starts from a complete config rather than a blank one:
+
+```console
+$ example settings init
+wrote ~/.config/example/config.yaml
+
+$ example settings init                  # non-destructive by default
+error: ~/.config/example/config.yaml already exists (use --force to overwrite)
+
+$ cat ~/.config/example/config.yaml
+name: example
+http:
+    base_url: https://api.example.com
+    timeout: 30
+    retries: 3
+vault:
+    type: keepass
+    path: secrets.kdbx
+    readonly: true
+```
+
+And the secret manager:
 
 ```console
 $ example secrets set api/token s3cr3t   # no agent yet → implicit unlock (prompts once)

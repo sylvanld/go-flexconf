@@ -30,9 +30,10 @@ creates the directory, but does not read or write configuration content itself.
 
 ## Types
 
-### `Settings`
+### `AppConfig`
 
-Immutable value describing one application's config location. Fields are
+Immutable value describing one application's config location — the *app
+context*, as distinct from `flexconf.Settings` (loaded content). Fields are
 unexported; construct with `New` and read through accessors.
 
 - **app name** — the application identifier supplied to `New`.
@@ -40,40 +41,70 @@ unexported; construct with `New` and read through accessors.
 
 ### `Option`
 
-`func(*Settings)` applied during `New` to customise the value.
+Applied during `New` to customise resolution: `WithPath`, `WithEnv`.
 
 ## Constructors and options
 
-### `New(appName string, opts ...Option) (*Settings, error)`
+### `New(appName string, opts ...Option) (*AppConfig, error)`
 
-Builds a `Settings` for `appName`.
+Builds an `AppConfig` for `appName`, resolving the settings directory by this
+precedence:
+
+1. `WithPath(path)` if non-empty.
+2. `<APP>_CONFIG` from the environment if set and non-empty — the config
+   **directory**.
+3. `DefaultPath(appName)`.
 
 - Returns `ErrEmptyAppName` if `appName` is `""`.
-- Resolves the default path via `DefaultPath(appName)`; propagates any error
-  from that step.
-- Applies each option in order to the constructed value, then returns it.
-- With no options, `Path()` equals `DefaultPath(appName)`.
+- Options are applied **before** resolution, so an explicit `WithPath` outranks
+  the environment regardless of argument order.
+- `DefaultPath` is consulted only when nothing above it applies; its error is
+  propagated.
+- With no options and no `<APP>_CONFIG`, `Path()` equals `DefaultPath(appName)`.
 
 ### `WithPath(path string) Option`
 
-Overrides the settings directory.
+Overrides the settings directory, outranking `<APP>_CONFIG`.
 
-- A non-empty `path` replaces the default.
-- An **empty** `path` is a deliberate no-op, so an unset override (e.g. from an
-  unset environment variable) never clobbers the default. This is the documented
-  contract used by the example app (`WithPath(os.Getenv("EXAMPLE_CONFIG"))`).
+- A non-empty `path` replaces everything below it in the precedence order.
+- An **empty** `path` is a deliberate no-op, so an unset override never clobbers
+  the resolution below it.
 
-The recommended idiom for a per-app override envvar is therefore:
+### `<APP>_CONFIG` — the directory override
+
+`New` reads it itself; the app writes no `os.Getenv`:
 
 ```go
-cfg, err := settings.New(appName, settings.WithPath(os.Getenv("EXAMPLE_CONFIG")))
+cfg, err := settings.New(appName)
 // EXAMPLE_CONFIG set   → that directory
 // EXAMPLE_CONFIG unset → ~/.config/<appName>/  (the default)
 ```
 
-Nothing in `settings` prescribes the envvar name; the app chooses it (by
-convention `<APP>_CONFIG`, uppercased app name). This keeps the package usable
-by any application without a hardcoded, tool-specific variable.
+**It names the config *directory*, never a file.** The main config file is
+always `config.yaml` inside it, so the variable relocates the directory as a
+unit — `config.yaml` and `secrets.kdbx` move together.
+
+That "as a unit" property is the reason resolution lives here and *only* here.
+An override interpreted independently by a second component would relocate some
+paths and not others, leaving an app reading its config from one directory and
+its secrets from another. There is one resolution point, so there is nothing to
+disagree with.
+
+### `EnvVar(appName string) string` (package function)
+
+Returns the variable name: uppercased app name, every non-alphanumeric character
+→ `_`, suffixed `_CONFIG`. `"my-app"` → `MY_APP_CONFIG`. An app name that maps to
+the empty string yields `APP_CONFIG`.
+
+### `WithEnv(env Env) Option`
+
+Injects the environment the lookup reads (`Lookup(name) (string, bool)`), so
+tests never depend on the process environment. A `nil` env is ignored.
+
+`Env` is declared in `settings` rather than reused from the loader because the
+loader imports this package — sharing the type would invert that dependency. The
+method sets are identical, so a `loader.MapEnv` satisfies `settings.Env`
+directly.
 
 ## Path resolution
 
@@ -115,11 +146,14 @@ Errors from `os.UserConfigDir()` and `os.MkdirAll()` are returned as-is
 
 ## Invariants
 
-- A successfully constructed `Settings` always has a non-empty app name and a
+- A successfully constructed `AppConfig` always has a non-empty app name and a
   non-empty path.
 - `File(name)` is always rooted at `Path()`.
-- Accessors never mutate the value; `Settings` is effectively read-only after
+- Accessors never mutate the value; `AppConfig` is effectively read-only after
   `New`.
+- **The settings directory is resolved exactly once**, in `New`. No other
+  component re-derives it from the environment, so every path built via `File`
+  relocates together.
 - **`settings` imports nothing from `secrets`, `flexconf`, or a YAML library** —
   it is the base layer everything else builds on.
 
@@ -161,7 +195,8 @@ invariant, every check that *can* run at load time does.
         │
         ▼
   1. Locate    resolve the config file path
-        │      (option → <APP>_CONFIG envvar → cfg.File("config.yaml"))
+        │      (option → cfg.File("config.yaml"); the directory, incl. its
+        │       <APP>_CONFIG override, was resolved by settings.New)
         ▼
   2. Read      read the file
         │
@@ -182,7 +217,11 @@ invariant, every check that *can* run at load time does.
 
 Steps 1–5 are owned by `flexconf`; step 6 is a `yaml.Unmarshal` into the struct
 the caller hands `Load`. `flexconf` never sees the app's schema — it decodes into
-an opaque `out any`, so merge/validate/defaults stay the application's job.
+an opaque `out any`, so merge and validation stay the application's job.
+
+Defaults are the one exception, and only because they need no schema knowledge:
+the app *declares* them as a pre-populated value of its own type, and `flexconf`
+merely decodes over it. See [Defaults](#defaults).
 
 ### Why substitute on the node tree, not the raw text
 
@@ -406,10 +445,10 @@ secrets:
 
 ```go
 // SecretDriverFactory builds a secrets.Driver from its config sub-block. It gets
-// the resolved *settings.Settings (for defaults like cfg.File("secrets.kdbx")),
+// the resolved *settings.AppConfig (for defaults like cfg.File("secrets.kdbx")),
 // the driver's own opts node (already templated with env+config only), and the
 // loader Env (for the env driver and for tests).
-type SecretDriverFactory func(cfg *settings.Settings, opts *yaml.Node, env Env) (secrets.Driver, error)
+type SecretDriverFactory func(cfg *settings.AppConfig, opts *yaml.Node, env Env) (secrets.Driver, error)
 
 // RegisterSecretDriver registers a driver factory under a name. Called from
 // init(); duplicate names panic; an unknown name in a config is a fatal load
@@ -477,15 +516,15 @@ rebuild, and neither path costs the other anything.
 // Load resolves the config file, reads+parses+templates it, and unmarshals the
 // result into out (a pointer to the app's config struct). Steps 1–5 are owned by
 // flexconf; the final yaml decode into out is step 6.
-func Load(cfg *settings.Settings, out any, opts ...Option) error
+func Load(cfg *settings.AppConfig, out any, opts ...Option) error
 
 // LoadFile runs steps 1–5 and returns the templated tree + taint set without
 // decoding, for callers that also want Dump (redacted rendering).
-func LoadFile(cfg *settings.Settings, opts ...Option) (*Loaded, error)
+func LoadFile(cfg *settings.AppConfig, opts ...Option) (*Settings, error)
 
-type Loaded struct { Tree *yaml.Node; Taint NodeSet }
-func (ld *Loaded) Decode(out any) error   // step 6, strips the loader-owned `secrets` block first
-func (ld *Loaded) Dump() ([]byte, error)  // re-render with tainted scalars → «redacted»
+type Settings struct { Tree *yaml.Node; Taint NodeSet; Default *yaml.Node }
+func (s *Settings) Decode(out any) error   // step 6, strips the loader-owned `secrets` block first
+func (s *Settings) Dump() ([]byte, error)  // re-render with tainted scalars → «redacted»
 
 // Options:
 func WithConfigFile(path string) Option       // explicit path (highest precedence)
@@ -498,9 +537,98 @@ func WithFS(fsys fs.FS) Option                // read root+includes from fsys (t
 Config-file location precedence (pipeline step 1):
 
 1. `WithConfigFile(path)` if non-empty.
-2. `os.Getenv("<APP>_CONFIG")` if set — the per-app override envvar (uppercased
-   app name), symmetric with `settings.WithPath`'s `<APP>_CONFIG` dir override.
-3. `cfg.File("config.yaml")` — the default, inside the resolved settings dir.
+2. `cfg.File("config.yaml")` — always this name, inside the resolved settings
+   directory.
+
+**The loader reads no environment variable of its own to locate the file.** The
+directory — including its `<APP>_CONFIG` override — is resolved once by
+`settings.New`, and the loader simply joins `config.yaml` onto it. Relocating
+config means pointing `<APP>_CONFIG` at a different *directory*, not naming a
+different file.
+
+## Defaults
+
+A default is **a pre-populated value of the app's own type**, never a parallel
+description of the schema. This is the whole design constraint: a `default:` tag
+or a YAML default-string is a second copy of the schema that drifts from the
+first one silently. A Go value cannot drift — it is type-checked against the
+struct it defaults.
+
+The mechanism rests on one property of `yaml.v3`: **decoding into a non-zero
+value leaves fields the document does not mention untouched.** So "apply
+defaults" is just "decode the default first, then decode the file over it", and
+the merge is per key, for free.
+
+```go
+// Defaults builds a Settings whose fallback tree is v marshalled to YAML.
+func Defaults(v any) Settings
+
+type Settings struct {
+    Tree    *yaml.Node  // what was loaded (nil if the block was absent)
+    Taint   NodeSet
+    Default *yaml.Node  // the declared fallback, decoded *under* Tree
+}
+```
+
+- `Decode` applies `Default` first, then `Tree` over it. A block the config
+  omits entirely still yields fully-populated settings; a block naming only some
+  keys inherits the rest.
+- `UnmarshalYAML` sets `Tree` but **preserves** `Default` — otherwise capturing a
+  block would silently discard its fallback and degrade the merge to a wholesale
+  replacement.
+- `MarshalYAML` renders `Tree`, or `Default` when nothing was loaded. This is
+  what lets a whole pre-populated config struct marshal straight to a default
+  config file.
+
+### Polymorphic defaults
+
+A variant's factory already returns a *fresh* target, so a factory returning a
+pre-populated value **is** that variant's default — `Decode` decodes the block
+onto it. Two additions make the fallback selectable and renderable:
+
+```go
+func (p *PolymorphicSettings[I]) SetDefault(name string) *PolymorphicSettings[I]
+func (p *PolymorphicSettings[I]) Default() (I, error)
+func (p *PolymorphicSettings[I]) DefaultSettings() (Settings, error)
+```
+
+- `SetDefault` names the variant a block resolves to when it omits the
+  discriminator, or is absent entirely. It **panics** on an unregistered name —
+  same fail-loud registry discipline as `Register`'s duplicate check, catching a
+  wiring bug at startup rather than at the first load.
+- Without a `SetDefault`, a missing discriminator stays a **fatal error**. Adding
+  the default mechanism must not relax the existing fail-loud behaviour.
+- `DefaultSettings` renders the default variant *plus the discriminator naming
+  it* — a complete, re-loadable block rather than an empty stub. The variant's
+  own struct never declares the discriminator, so it is spliced back in as the
+  block's first key.
+
+```go
+var vaults = flexconf.NewPolymorphicSettings[vault]("type").
+    Register("keepass", func() vault { return &keepassVault{Path: "secrets.kdbx", ReadOnly: true} }).
+    Register("env",     func() vault { return &envVault{Prefix: "APP_"} }).
+    SetDefault("keepass")
+```
+
+### Declaring an application's defaults
+
+The app composes the same pieces into one function returning a fresh, fully
+populated config. It is a `func` rather than a shared value so each call yields
+defaults untouched by anything that decoded over them earlier:
+
+```go
+func defaultConfig() any {
+    vaultDefaults, _ := vaults.DefaultSettings()
+    return &config{
+        Name:  "example",
+        HTTP:  flexconf.Defaults(&httpConfig{BaseURL: "https://api.example.com", Timeout: 30}),
+        Vault: vaultDefaults,
+    }
+}
+```
+
+Marshalling that value is what `settings init` writes — see
+[`cli/settings`](./settingscli.md).
 
 ## Config shape
 
@@ -588,8 +716,8 @@ and gets `Load` plus everything beneath it.
 
 | Concept | Where it lives | Notes |
 |---|---|---|
-| config directory | `settings.Settings` | `~/.config/<app>/`, `<APP>_CONFIG` dir override |
-| config file location | `config.Load` step 1 | option → `<APP>_CONFIG` → `cfg.File("config.yaml")` |
+| config directory | `settings.AppConfig` | `~/.config/<app>/`; `WithPath` → `<APP>_CONFIG` → default. The single resolution point. |
+| config file location | `config.Load` step 1 | `WithConfigFile` → `cfg.File("config.yaml")`; no envvar of its own |
 | `$(env:NAME)` | `Template`, `Env` interface | non-secret, per-host; may appear in logs |
 | `$(secret:NAME)` | `Template` + `SecretResolver` over `secrets.Store` | tainted → redacted; the only credential channel |
 | `$(config:PATH)` | `Template` splice + injectable fs | compose config from files; recursive, cycle-checked |

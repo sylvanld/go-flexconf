@@ -17,6 +17,7 @@ Module: `github.com/sylvanld/go-flexconf`
 | [keepass-driver.md](keepass-driver.md) | `secrets` | `Driver` backed by a password-protected KeePass `.kdbx` file. |
 | [agent.md](agent.md) | `agent` | Background process holding an unlocked driver, served over a per-user Unix socket, plus a matching client. |
 | [secretcli.md](secretcli.md) | `cli/secrets` | Cobra command tree wiring settings + secrets + agent into any app's CLI. |
+| [settingscli.md](settingscli.md) | `cli/settings` | Cobra command tree writing an app's default configuration file (`init`). |
 
 ## Layering
 
@@ -29,6 +30,8 @@ secrets ─────────┤ Store ──► Driver ──┬─► Ke
 agent ───────────┤ Server holds an unlocked Driver; Client *is* a Driver
                  │
 cli/secrets ─────┘ builds the whole thing as a cobra command tree
+
+cli/settings ────► writes the app's default config file (the loader's input)
 ```
 
 The unifying abstraction is `secrets.Driver`: both the real KeePass backend and

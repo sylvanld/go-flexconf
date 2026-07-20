@@ -1,8 +1,9 @@
 # Quickstart
 
 This guide walks through wiring `flexconf` into a Go application: resolving where
-config lives, loading a templated YAML file into a typed struct, and pulling
-secrets in without ever writing them to disk in plaintext.
+config lives, loading a templated YAML file into a typed struct, generating a
+default config file for a fresh install, and pulling secrets in without ever
+writing them to disk in plaintext.
 
 Full reference: [`docs/specs/settings.md`](specs/settings.md) and
 [`docs/specs/secrets.md`](specs/secrets.md).
@@ -18,8 +19,12 @@ Three concepts, all reachable from the one `github.com/sylvanld/go-flexconf` imp
 | Concept | Type | What it is |
 | --- | --- | --- |
 | **App context** | `flexconf.AppConfig` | *Where* config lives — the app name and its config dir (`~/.config/<app>/`). Built with `flexconf.NewAppConfig`. |
-| **Loaded settings** | `flexconf.Settings` | *What* was loaded — a block located, templated, and secret-resolved, decoded into your struct on demand. |
+| **Loaded settings** | `flexconf.Settings` | *What* was loaded — a block located, templated, and secret-resolved, decoded into your struct on demand. Also carries a block's *defaults*, via `flexconf.Defaults`. |
 | **Secrets** | `secrets.Store` | *How* secrets are stored — a store over pluggable drivers (keepass, agent, …). |
+
+Two ready-made cobra command trees mount into your CLI: `cli/settings`
+(`settings init` — write the default config file) and `cli/secrets`
+(`secrets set/get/list` — manage the secrets your config references).
 
 You import one path and reach the loader as `flexconf.Load`. The implementation
 lives in `internal/loader`; the root package is a thin re-export.
@@ -64,9 +69,22 @@ if err != nil {
 }
 ```
 
-`cfg.File("config.yaml")` → `~/.config/myapp/config.yaml`. Override the
-directory in tests or one-offs with
-`flexconf.NewAppConfig("myapp", flexconf.WithAppPath("/some/dir"))`.
+`cfg.File("config.yaml")` → `~/.config/myapp/config.yaml`.
+
+The directory resolves by this precedence:
+
+1. `flexconf.WithAppPath("/some/dir")` — explicit, for tests and one-offs.
+2. **`MYAPP_CONFIG`** — the `<APP>_CONFIG` environment variable (uppercased app
+   name, non-alphanumerics → `_`). `NewAppConfig` reads it for you; you write no
+   `os.Getenv`.
+3. `~/.config/myapp/` — the platform default.
+
+`<APP>_CONFIG` names the config **directory**, never a file. The main config file
+is always `config.yaml` inside it, so pointing the variable elsewhere relocates
+the whole directory as a unit — `config.yaml` and `secrets.kdbx` move together.
+That is why the directory is resolved here, once: an override only some
+components honoured would leave you reading config from one place and secrets
+from another.
 
 ## 3. Load
 
@@ -79,9 +97,8 @@ if err := flexconf.Load(cfg, &c); err != nil {
 
 `Load` runs **locate → read → parse → template → decode**:
 
-1. **Locate** — `~/.config/myapp/config.yaml`, unless the `MYAPP_CONFIG`
-   environment variable points somewhere else (see [Choosing the config
-   file](#choosing-the-config-file)).
+1. **Locate** — `config.yaml` inside the app's config directory (see [Choosing
+   the config file](#choosing-the-config-file)).
 2. **Read + parse** the YAML into a node tree.
 3. **Template** every `$(…)` reference on that tree (not on raw text — an
    injected value can never change the document's structure).
@@ -118,7 +135,93 @@ Reference syntax:
 References may be embedded in text (`$(env:HOME)/.cache/myapp`) — except
 `$(config:…)`, which must be the whole value since it splices in structure.
 
-## 5. Secrets
+## 5. Defaults, and generating that file
+
+Hand-writing the file above is fine for you; it is a poor first experience for
+everyone else. `flexconf` can write it, from defaults you declare **as a
+pre-populated value of your own config type** — not as struct tags or a separate
+YAML blob, both of which are a second copy of your schema that drifts from the
+first one silently. A Go value can't drift: it's type-checked against the struct
+it defaults.
+
+```go
+func defaultConfig() any {
+	c := &Config{Debug: false, Channels: []string{"desktop"}}
+	c.HTTP.BaseURL = "https://api.example.com"
+	c.HTTP.Port = 8080
+	return c
+}
+```
+
+### Defaults apply on load, per key
+
+Pass a pre-populated struct to `Load` and the file overrides only the keys it
+names — YAML decoding leaves everything it doesn't mention untouched:
+
+```go
+c := defaultConfig().(*Config)
+if err := flexconf.Load(cfg, c); err != nil {   // config.yaml overrides per key
+	return err
+}
+```
+
+A `config.yaml` containing just `http: {port: 9000}` yields port `9000` and the
+default base URL — no merge code, no `if x == ""` fixups.
+
+### Writing the default file: `settings init`
+
+Mount the settings command tree and users get an `init` that renders those same
+defaults to the file `Load` reads:
+
+```go
+import settingscli "github.com/sylvanld/go-flexconf/cli/settings"
+
+root.AddCommand(settingscli.New(cfg, defaultConfig)) // adds "myapp settings ..."
+```
+
+```sh
+$ myapp settings init
+wrote /home/u/.config/myapp/config.yaml
+
+$ myapp settings init          # never clobbers silently
+error: /home/u/.config/myapp/config.yaml already exists (use --force to overwrite)
+
+$ myapp settings path
+/home/u/.config/myapp/config.yaml
+```
+
+`defaults` is a `func() any`, not a value, so each call renders defaults
+untouched by anything that decoded over them earlier. The file is written `0600`
+— a config file is a natural home for credentials.
+
+What `init` writes always round-trips back through `Load` to the same values.
+
+### Defaults for `flexconf.Settings` blocks
+
+A block you decode lazily (see [section 8](#8-blocks-whose-shape-you-dont-know-up-front))
+is a `flexconf.Settings`, so it needs its default supplied as one.
+`flexconf.Defaults` wraps a pre-populated value:
+
+```go
+type Config struct {
+	Name string            `yaml:"name"`
+	HTTP flexconf.Settings `yaml:"http"`
+}
+
+func defaultConfig() any {
+	return &Config{
+		Name: "myapp",
+		HTTP: flexconf.Defaults(&HTTPConfig{BaseURL: "https://api.example.com", Port: 8080}),
+	}
+}
+```
+
+The same per-key merge applies: the loaded block decodes *over* the default, so
+`http: {port: 9000}` in the file keeps the default base URL. That holds even
+though the block is captured raw — `Settings` keeps its default alongside the
+loaded tree rather than replacing it.
+
+## 6. Secrets
 
 `$(secret:…)` resolves through the `secrets` package. There are three ways the
 backing store is chosen, in precedence order.
@@ -187,7 +290,7 @@ myapp secrets get api/token
 myapp secrets list
 ```
 
-## 6. Redaction
+## 7. Redaction
 
 Secret-sourced values are *tainted* through the whole pipeline, so a config dump
 never leaks them. Use `LoadFile` + `Dump` wherever you echo config (a
@@ -208,7 +311,7 @@ if err := loaded.Decode(&c); err != nil {
 Redaction is structural (the taint set), not a field allowlist — you can't
 forget to mark a new secret field.
 
-## 7. Blocks whose shape you don't know up front
+## 8. Blocks whose shape you don't know up front
 
 Sometimes a parent struct can't statically declare a child block's shape —
 either the owning subsystem should decode its own slice, or the shape depends on
@@ -254,13 +357,11 @@ type EnvVault struct {
 	Prefix string `yaml:"prefix"`
 }
 
-// Register the variants once; the discriminator field is explicit (no default).
-var vaults = flexconf.NewPolymorphicSettings[Vault]("type")
-
-func init() {
-	vaults.Register("keepass", func() Vault { return &KeepassVault{} })
-	vaults.Register("env",     func() Vault { return &EnvVault{} })
-}
+// Register the variants once. The discriminator field name is explicit — there
+// is no default; each block names its own selector.
+var vaults = flexconf.NewPolymorphicSettings[Vault]("type").
+	Register("keepass", func() Vault { return &KeepassVault{} }).
+	Register("env",     func() Vault { return &EnvVault{} })
 
 type Config struct {
 	Vault flexconf.Settings `yaml:"vault"`
@@ -276,15 +377,63 @@ so a variant struct declares only its own fields and an unknown key is an error.
 This is the same tagged-union mechanism the built-in `secrets:` block uses to
 select its driver, made reusable for your own config.
 
+### Defaults for polymorphic blocks
+
+A factory returns a *fresh* target each time, so a factory that returns a
+**pre-populated** value declares that variant's defaults — the block decodes over
+it, key by key. `SetDefault` additionally names the variant a block resolves to
+when it omits the discriminator (or is missing entirely):
+
+```go
+var vaults = flexconf.NewPolymorphicSettings[Vault]("type").
+	Register("keepass", func() Vault { return &KeepassVault{Path: "secrets.kdbx", ReadOnly: true} }).
+	Register("env",     func() Vault { return &EnvVault{Prefix: "MYAPP_"} }).
+	SetDefault("keepass")
+```
+
+Now `vault: {path: /custom.kdbx}` resolves to a `*KeepassVault` with
+`ReadOnly: true` inherited. `SetDefault` **panics** on a name you never
+registered — that's a wiring bug, caught at startup rather than at the first
+load. Without a `SetDefault`, a block missing its discriminator stays a fatal
+error, as before.
+
+For `settings init`, `DefaultSettings()` renders the default variant *including*
+the discriminator that selects it, so the generated block is complete and
+re-loadable rather than an empty stub:
+
+```go
+func defaultConfig() any {
+	vaultDefaults, err := vaults.DefaultSettings()
+	if err != nil {
+		panic(err) // a registry wiring bug, not a runtime condition
+	}
+	return &Config{Vault: vaultDefaults}
+}
+```
+
+```yaml
+vault:
+    type: keepass        # spliced back in — variant structs never declare it
+    path: secrets.kdbx
+    readonly: true
+```
+
 ## Choosing the config file
 
 `Load` locates the config file with this precedence:
 
-1. `flexconf.WithConfigFile("/path/to/config.yaml")` — explicit override.
-2. The `<APP>_CONFIG` environment variable — for app name `myapp`, that's
-   `MYAPP_CONFIG` (uppercased, non-alphanumerics → `_`). It names the config
-   **file**, not the directory.
-3. `cfg.File("config.yaml")` — the default under the settings directory.
+1. `flexconf.WithConfigFile("/path/to/config.yaml")` — explicit override, for
+   tests or a `--config` flag.
+2. `cfg.File("config.yaml")` — always that name, inside the config directory.
+
+There is no environment variable at this level. `<APP>_CONFIG` moves the
+**directory** (step 2 of [Build the app context](#2-build-the-app-context)), and
+`config.yaml` is always the file inside it:
+
+```sh
+MYAPP_CONFIG=/etc/myapp   →  /etc/myapp/config.yaml
+                             /etc/myapp/secrets.kdbx
+```
 
 ## Testing
 
@@ -318,6 +467,7 @@ import (
 
 	"github.com/sylvanld/go-flexconf"
 	clisecrets "github.com/sylvanld/go-flexconf/cli/secrets"
+	settingscli "github.com/sylvanld/go-flexconf/cli/settings"
 )
 
 type Config struct {
@@ -327,6 +477,15 @@ type Config struct {
 		Token   string `yaml:"token"`
 	} `yaml:"http"`
 	Debug bool `yaml:"debug"`
+}
+
+// defaultConfig returns a fresh, fully-populated config: what "settings init"
+// writes, and the baseline the config file is decoded over.
+func defaultConfig() any {
+	c := &Config{}
+	c.HTTP.BaseURL = "https://api.example.com"
+	c.HTTP.Port = 8080
+	return c
 }
 
 func main() {
@@ -346,11 +505,12 @@ func run() error {
 	}
 
 	root := &cobra.Command{Use: "myapp", SilenceUsage: true}
-	root.AddCommand(clisecrets.New(cfg)) // "myapp secrets ..."
+	root.AddCommand(clisecrets.New(cfg))                 // "myapp secrets ..."
+	root.AddCommand(settingscli.New(cfg, defaultConfig)) // "myapp settings ..."
 
 	root.RunE = func(*cobra.Command, []string) error {
-		var c Config
-		if err := flexconf.Load(cfg, &c); err != nil {
+		c := defaultConfig().(*Config) // start from the defaults
+		if err := flexconf.Load(cfg, c); err != nil {
 			return err
 		}
 		fmt.Printf("listening on :%d → %s\n", c.HTTP.Port, c.HTTP.BaseURL)
