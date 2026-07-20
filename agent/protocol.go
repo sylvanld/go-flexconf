@@ -12,7 +12,7 @@ package agent
 import (
 	"errors"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // Protocol operations.

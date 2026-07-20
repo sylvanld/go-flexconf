@@ -10,10 +10,10 @@ Full reference: [`docs/specs/settings.md`](specs/settings.md) and
 ## Install
 
 ```sh
-go get github.com/sylvanld/flexconf
+go get github.com/sylvanld/go-flexconf
 ```
 
-Three concepts, all reachable from the one `github.com/sylvanld/flexconf` import:
+Three concepts, all reachable from the one `github.com/sylvanld/go-flexconf` import:
 
 | Concept | Type | What it is |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ Mount the reusable secret-manager CLI in your own command tree so users can
 create the secrets your config references:
 
 ```go
-import clisecrets "github.com/sylvanld/flexconf/cli/secrets"
+import clisecrets "github.com/sylvanld/go-flexconf/cli/secrets"
 
 root.AddCommand(clisecrets.New(cfg)) // adds "myapp secrets ..."
 ```
@@ -316,8 +316,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sylvanld/flexconf"
-	clisecrets "github.com/sylvanld/flexconf/cli/secrets"
+	"github.com/sylvanld/go-flexconf"
+	clisecrets "github.com/sylvanld/go-flexconf/cli/secrets"
 )
 
 type Config struct {

@@ -1,4 +1,4 @@
-module github.com/sylvanld/flexconf
+module github.com/sylvanld/go-flexconf
 
 go 1.26.4
 

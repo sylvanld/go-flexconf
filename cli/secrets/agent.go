@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/sylvanld/flexconf/agent"
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/agent"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // agentGroup builds the "agent" command group and its sub-commands.

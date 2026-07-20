@@ -10,12 +10,12 @@
 //
 // This file is a thin façade: the implementation lives in internal/loader and
 // is re-exported here so callers import a single, flat public surface as
-// github.com/sylvanld/flexconf.
+// github.com/sylvanld/go-flexconf.
 package flexconf
 
 import (
-	"github.com/sylvanld/flexconf/internal/loader"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/internal/loader"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 // --- App context -----------------------------------------------------------

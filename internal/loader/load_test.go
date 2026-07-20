@@ -5,8 +5,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sylvanld/flexconf/secrets"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 // mapResolver is a fixed SecretResolver for tests.

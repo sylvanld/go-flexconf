@@ -1,6 +1,6 @@
 # `cli/secrets` (`secretcli`) — embeddable command tree
 
-Package `cli/secrets` (import path `github.com/sylvanld/flexconf/cli/secrets`,
+Package `cli/secrets` (import path `github.com/sylvanld/go-flexconf/cli/secrets`,
 package name `secrets`, referred to as **secretcli**) is a factory that builds
 the whole secret manager as a [cobra](https://github.com/spf13/cobra) command
 tree, ready to mount as a sub-command of any application's CLI. It wires

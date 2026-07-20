@@ -18,8 +18,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sylvanld/flexconf/cli/secrets"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/cli/secrets"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 const appName = "example"

@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 func (c *cli) getCmd() *cobra.Command {

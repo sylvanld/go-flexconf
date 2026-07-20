@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // Client is a secrets.Driver that forwards operations to a running agent over a

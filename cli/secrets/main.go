@@ -25,9 +25,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sylvanld/flexconf/agent"
-	"github.com/sylvanld/flexconf/secrets"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/agent"
+	"github.com/sylvanld/go-flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 // Defaults for a freshly built command tree.

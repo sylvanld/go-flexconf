@@ -6,7 +6,7 @@ its inputs, outputs, errors, side effects, and invariants — independently of t
 implementation, so they can serve as a reference for callers and as a contract
 for future changes.
 
-Module: `github.com/sylvanld/flexconf`
+Module: `github.com/sylvanld/go-flexconf`
 
 ## Components
 

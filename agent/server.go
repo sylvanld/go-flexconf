@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // Default expiry values.

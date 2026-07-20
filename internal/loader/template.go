@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // NodeSet marks nodes of a templated tree, used for the secret taint set.

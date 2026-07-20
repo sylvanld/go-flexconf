@@ -19,8 +19,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/sylvanld/flexconf/secrets"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 // Settings is a config block that has been located, templated, and

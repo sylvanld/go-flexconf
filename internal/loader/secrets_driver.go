@@ -11,9 +11,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/sylvanld/flexconf/agent"
-	"github.com/sylvanld/flexconf/secrets"
-	"github.com/sylvanld/flexconf/settings"
+	"github.com/sylvanld/go-flexconf/agent"
+	"github.com/sylvanld/go-flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/settings"
 )
 
 // SecretResolver resolves a $(secret:NAME) reference to its value. The name is

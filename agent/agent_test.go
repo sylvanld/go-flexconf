@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sylvanld/flexconf/secrets"
+	"github.com/sylvanld/go-flexconf/secrets"
 )
 
 // fakeDriver is an in-memory secrets.Driver for tests (no KeePass, no password).
