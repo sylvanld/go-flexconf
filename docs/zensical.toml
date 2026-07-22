@@ -52,6 +52,7 @@ nav = [
   { "Roadmap" = "roadmap.md" },
   { "Reference" = [
     { "flexprompt" = "reference/flexprompt.md" },
+    { "flexvault" = "reference/flexvault.md" },
   ] },
   { "Specs" = [
     { "Specs index" = "specs/README.md" },
