@@ -596,18 +596,21 @@ lose data. There is no cross-process file locking in v1. Operators who need
 concurrent writers should keep an agent running (the single owner) or serialize
 externally.
 
-## 11. Caching & rotation — deferred
+## 11. Caching & rotation — out of scope for v1
 
-Out of scope here; noted so the interface doesn't preclude them:
+Out of scope for v1; noted so the interface doesn't preclude a later addition:
 
-- The manager is the intended home for an optional read-through cache with TTL.
+- The manager is the intended home for an optional read-through cache with TTL —
+  **not built in v1** ([overview.md](overview.md) §8).
 - Rotating/dynamic secrets may need a lazy/refresh model rather than eager
-  `Get`; ties into the eager-vs-lazy question in [overview.md](overview.md) §7.
+  `Get`. v1 resolves **eagerly** and has no lazy mode ([overview.md](overview.md)
+  §8, [resolvers.md](resolvers.md) §9); this is settled, not an open question.
 - **Agent cache coherence** — an unlocked agent serves reads from its in-memory
   snapshot, so a value changed out-of-band (external rotation, a direct file edit,
   a `set` not routed through this agent) can be stale; v1 offers no cross-process
-  invalidation. Detailed in [resolvers.md](resolvers.md) §9 and resolved together
-  with the cache/TTL work here.
+  invalidation. This is an **accepted v1 limitation** (detailed in
+  [resolvers.md](resolvers.md) §9), addressable only if the cache/TTL work above
+  is ever done post-v1.
 
 ## 12. Resolved decisions & deferred items
 

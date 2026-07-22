@@ -7,7 +7,7 @@ tags:
 
 # Overview
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Audience:** Contributors to flexconf and developers integrating the SDK.
 
 This spec describes the overall architecture of flexconf, the core concepts,
@@ -99,7 +99,7 @@ file from each layer → merge by precedence → resolve tokens (via resolvers,
 which may call vault drivers) → bind into `dst` → validate. The same Loader
 loads several config kinds by calling `Load` with different names and structs
 (`Load("config.yaml", &cfg)`, `Load("agents.yaml", &agents)`). Details:
-_config-loading.md_ and _api.md_.
+[config-loading.md](config-loading.md) and [api.md](api.md).
 
 ## 3. How the pieces fit together
 
@@ -225,17 +225,18 @@ the `flexprompt` `Prompter` in [prompter.md](prompter.md); `flexcli` in
 | **Secret agent** | Long-lived, ssh-agent-style background process (spawned by `flexcli`) that holds one unlocked vault in memory and serves `get`/`set`/`list` over a private socket, auto-locking after an idle timeout. See _cli.md_. |
 | **Global vault** | A user-level vault defined in the user's registry (`~/.config/flexconf/vaults.yaml`), independent of any app. See _vault-registry.md_ §2 and _cli.md_ §5. |
 
-## 8. Open questions
+## 8. Resolved design decisions
 
-Tracked here until resolved into the appropriate spec:
+These were tracked here while open; they are now **settled** for v1 and recorded
+in the topic specs. Kept here as a pointer so the whole picture is visible.
 
-- Whether resolution is eager (at load) only, or optionally lazy/on-access for
-  secrets that should rotate.
-- Caching and TTL semantics for vault drivers.
-
-Resolve these in the topic specs and remove them from this list.
-
-**Resolved** (kept for reference):
-
-- Behavior on partial failure — some tokens unresolved — `Load` fails loud and
-  early, see [config-loading.md](config-loading.md) §3, §5.
+- **Resolution is eager, at load, only.** Every token (including `secret:`) is
+  resolved during `Load`; there is **no** lazy/on-access or rotating-secret mode.
+  This is a firm v1 decision, not a placeholder ([resolvers.md](resolvers.md) §5,
+  §9; [config-loading.md](config-loading.md) §5).
+- **No caching or TTL for vault drivers in v1.** Each resolution asks the vault
+  (through the running agent, or the in-process Manager); there is **no**
+  freshness/TTL/invalidation layer. Explicitly out of scope for v1
+  ([vault-drivers.md](vault-drivers.md) §11, [resolvers.md](resolvers.md) §9).
+- **Behavior on partial failure** — some tokens unresolved — `Load` fails loud
+  and early ([config-loading.md](config-loading.md) §3, §5).

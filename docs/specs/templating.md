@@ -7,7 +7,7 @@ tags:
 
 # Templating
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** the token **grammar** (`$(scheme:path)`), where tokens may appear,
   how they combine with literal text, escaping, the (deliberate) **absence** of
   nesting, the **node-tree** resolution model and the observable typing it
@@ -191,8 +191,8 @@ Syntax here; semantics in [resolvers.md](resolvers.md).
 
 ## 9. Errors
 
-Grammar/expansion sentinels (final taxonomy in _errors.md_; scheme-semantic
-errors live in [resolvers.md](resolvers.md) §7):
+Grammar/expansion sentinels (full taxonomy in [errors.md](errors.md);
+scheme-semantic errors live in [resolvers.md](resolvers.md) §7):
 
 ```go
 var (
@@ -227,11 +227,13 @@ came from `secret:` redacts the value ([config-loading.md](config-loading.md) §
   in the grammar for any scheme. Config-file defaults (via the schema/binding
   layer) are the way to supply a fallback.
 
-## 11. Open questions / deferred
+## 11. Settled — no open grammar questions
 
-- **Additional custom schemes' grammar** — custom schemes reuse the `$(scheme:path)`
-  grammar unchanged; any scheme needing richer path syntax is the scheme's own
-  concern, not the engine's.
-- **Redaction dump format** — templating *marks* `secret:` outputs tainted; the
-  `Dump()`/`«redacted»` mechanism is owned by _redaction.md_
-  ([missing.md](missing.md) §1.2).
+- **Custom schemes reuse the grammar as-is.** A custom scheme uses `$(scheme:path)`
+  unchanged; any scheme needing richer path syntax handles that inside its own
+  `path`, never by extending the engine grammar. Not an open item.
+- **Secret-origin marking, no dump format.** The engine leaves `secret:` outputs
+  flagged secret-origin so they never appear in error messages
+  ([errors.md](errors.md) §1). v1 has no config-dump feature, so there is no
+  `«redacted»` dump format and no `redaction.md` — resolved, not deferred
+  ([errors.md](errors.md) §4).

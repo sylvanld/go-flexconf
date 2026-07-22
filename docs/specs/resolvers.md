@@ -7,7 +7,7 @@ tags:
 
 # Resolvers
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** the `Resolver` abstraction, how the Loader invokes resolvers on the
   merged tree, the built-in schemes (`env`, `secret`, `file`), how custom schemes
   register, and — the core of this spec — how the **`secret:` scheme reaches a
@@ -126,10 +126,11 @@ $(file:/abs/or/relative/path)
 This is the scheme that unifies config and secrets. Its `path` is
 `[<vault>:]<namespace>/<key>` (parsing rules: [vault-registry.md](vault-registry.md) §5); it
 selects a **named vault** (or the default) and returns that secret's single
-string value ([vault-drivers.md](vault-drivers.md) §7). Resolved secret values
-are **tainted** for redaction (mechanism owned by _redaction.md_ /
-[missing.md](missing.md) §1.2; this spec produces the taint, it does not define
-the dump format).
+string value ([vault-drivers.md](vault-drivers.md) §7). Every resolved `secret:`
+value is flagged **secret-origin**, so the Loader never prints it in an error
+message ([errors.md](errors.md) §1). v1 has **no** config-dump feature, so there
+is nothing to redact beyond error messages — there is no separate taint set or
+`«redacted»` dump format ([errors.md](errors.md) §4).
 
 ### 5.1 Resolution goes through the agent by default
 
@@ -267,7 +268,7 @@ unchanged — only the code's home moves.
 
 ## 7. Errors
 
-Sentinel errors, usable with `errors.Is` (final taxonomy in _errors.md_):
+Sentinel errors, usable with `errors.Is` (full taxonomy in [errors.md](errors.md)):
 
 ```go
 var (
@@ -301,15 +302,19 @@ var (
   layering stays downward-only (§5.5). Supersedes the agent's placement in
   [cli.md](cli.md) §1 and [overview.md](overview.md) §6.
 
-## 9. Open questions / deferred
+## 9. Settled — out of scope for v1
 
-- **Redaction / taint dump format** — this spec *produces* the taint on every
-  `secret:` value; the `Dump()`/`«redacted»` mechanism is owned by _redaction.md_
-  ([missing.md](missing.md) §1.2).
-- **Lazy / rotating secrets** — v1 resolves eagerly at `Load`; a lazy/on-access
-  mode ties to the eager-vs-lazy question ([overview.md](overview.md) §8) and to
-  caching/rotation ([vault-drivers.md](vault-drivers.md) §11).
-- **Agent cache coherence (deferred, intentional).** An unlocked agent holds the
+These were once tracked as open; they are now firm v1 decisions.
+
+- **Secret-origin redaction, no dump format.** Every `secret:` value is flagged
+  secret-origin so it never appears in an error message ([errors.md](errors.md)
+  §1). Because v1 has **no** config-dump feature, there is no `Dump()`/`«redacted»`
+  format and no `redaction.md` — this is resolved, not deferred
+  ([errors.md](errors.md) §4).
+- **Lazy / rotating secrets — no.** v1 resolves **eagerly** at `Load`
+  ([overview.md](overview.md) §8). There is no lazy/on-access mode; a rotating
+  secret is re-read only on a fresh `Load`.
+- **Agent cache coherence (accepted limitation, out of scope).** An unlocked agent holds the
   vault's decrypted contents in memory, so a value read from it may be **stale**
   if the underlying secret changes after the agent unlocked it — e.g. an
   out-of-band rotation, another tool editing the backend file, or a `set` that

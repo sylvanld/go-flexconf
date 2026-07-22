@@ -7,7 +7,7 @@ tags:
 
 # Schema & Binding
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** how an application **declares** the shape of its configuration (Go
   types + the `flexconf` struct tag), how **defaults** are supplied, how the
   resolved value tree is **bound** onto those types, and the **strict validation**
@@ -168,8 +168,8 @@ assigns its value. **Supported target types:**
     `interface{ DecodeFlexconf(Node) error }` could be offered. It is deferred: the
     **variant** mechanism ([variants.md](variants.md)) already covers the main
     "concrete type chosen from config" need, and `encoding.TextUnmarshaler` covers
-    scalar custom types. Revisit in _api.md_ if a real case needs whole-subtree
-    custom decode.
+    scalar custom types. Revisit in [api.md](api.md) §6 if a real case needs
+    whole-subtree custom decode.
 
 **Scalar coercion.** A resolved scalar binds to the field's type exactly as the
 same literal would: `"8080"` → `int`, `"true"` → `bool`, `"30s"` →
@@ -268,7 +268,7 @@ Within `Load` ([config-loading.md](config-loading.md) §5):
 
 ## 9. Errors
 
-Sentinel errors, usable with `errors.Is` (final taxonomy in _errors.md_):
+Sentinel errors, usable with `errors.Is` (full taxonomy in [errors.md](errors.md)):
 
 ```go
 var (
@@ -302,9 +302,12 @@ var (
 - **All-or-nothing** via a temp seeded from `dst` (§7).
 - **Polymorphic** delegated to [variants.md](variants.md) (§6).
 
-## 11. Open questions / deferred
+## 11. Settled
 
-- **`flexconf.Decoder` structured hook** (§4 note) — defer to _api.md_ pending a
-  concrete need.
-- **Injectable binder dependencies** (`WithFS`/`WithEnv`, [missing.md](missing.md)
-  §2.7) — testability surface, owned by _api.md_.
+- **Injectable binder dependencies are in v1.** `WithFS`/`WithEnv`
+  ([resolvers.md](resolvers.md) §3–§4) are part of the public surface
+  ([api.md](api.md) §1); the testability question is closed, not open.
+- **`flexconf.Decoder` structured hook — not in v1.** A whole-subtree custom-decode
+  interface (§4 note) is deliberately out of v1: `encoding.TextUnmarshaler` covers
+  scalar custom types and [variants.md](variants.md) covers "type chosen from
+  config." It would be additive if a concrete need appears ([api.md](api.md) §6).

@@ -7,7 +7,7 @@ tags:
 
 # CLI & Secret Agent (`flexcli`)
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** the `flexcli` package — a mountable Cobra command group `secret`
   (`init`/`unlock`/`lock`/`get`/`set`/`list`/`vaults`) — its two entry points (**embedded**
   in an app's CLI; and a **standalone `flexconf` binary** for global/personal
@@ -546,7 +546,7 @@ remains deferred.
 - Exit codes: **`0`** success; **`1`** generic failure; **`2`** usage error
   (Cobra default); **`3`** locked / not-unlocked (so scripts can branch and run
   `unlock`, then retry). No separate not-found code in v1 (a missing secret is a
-  generic `1`). These are stable and mirrored in _errors.md_.
+  generic `1`). These are stable and mirror the sentinels in [errors.md](errors.md).
 
 ## 10. Typical embedded session
 
@@ -595,7 +595,11 @@ uses the same running agent if present, or unlocks per the loader's policy.
 
 ## 12. Out of scope / deferred
 
-- **Config-loading commands** (dumping/validating the app's own config) — later.
+- **Config-loading / config-dump commands** (printing or validating the app's own
+  config) — **not in v1.** v1 has no config-printing feature at all
+  ([errors.md](errors.md) §4); an `init`/`path`-style generator
+  ([missing.md](missing.md) §2.5) is a possible additive post-v1 command, not a v1
+  deliverable.
 - **Non-Unix transports** — v1 targets Unix domain sockets; Windows named pipes
   (or AF_UNIX on modern Windows) are deferred.
 - **Shell completion, man pages** — standard Cobra features, not specified here.

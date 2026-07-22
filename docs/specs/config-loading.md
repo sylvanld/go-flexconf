@@ -7,7 +7,7 @@ tags:
 
 # Configuration Loading
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** where application configuration lives (**config directories** as
   layers), the **Loader** and its `Load(name, &dst)` method, how the same-named
   file is **merged** across layers, and the **load lifecycle** (read → merge →
@@ -178,7 +178,7 @@ with a clear error.
 
 ## 6. Errors
 
-Sentinel errors, usable with `errors.Is` (final taxonomy in _errors.md_):
+Sentinel errors, usable with `errors.Is` (full taxonomy in [errors.md](errors.md)):
 
 ```go
 var (
@@ -194,14 +194,26 @@ var (
   bind-time type mismatch on a value that came from a `secret:` token names the
   field and key path but **redacts the value** (§5, step 4).
 
-## 7. Open questions / deferred
+## 7. Deferred & rejected
+
+**Deferred (post-v1, additive — not open design questions):**
 
 - **Directory discovery vs. explicit list.** v1 takes an explicit `dirs` list;
-  whether to add well-known/XDG discovery or an env override (à la
-  `FLEXCONF_VAULTS`, [vault-registry.md](vault-registry.md) §3) is deferred.
-- **Optional vs. required files per call.** A `LoadOptional` variant (return
-  nil / leave defaults when absent) may complement the fail-loud `Load`.
-- **Additional file formats** (TOML/JSON, …) — deferred; v1 is YAML-only (§2),
-  addable later without changing the load model.
-- **Watch/reload** for long-lived processes — out of scope for v1 (ties to the
-  eager-vs-lazy question in [overview.md](overview.md) §7).
+  adding well-known/XDG discovery or an env override (à la `FLEXCONF_VAULTS`,
+  [vault-registry.md](vault-registry.md) §3) — and the related app-name-derived
+  single directory ([missing.md](missing.md) §2.4) — is deferred. It would be a
+  new constructor/option, not a change to the load model.
+- **Additional file formats** (TOML/JSON, …) — v1 is YAML-only (§2); addable
+  later without changing the load model.
+- **Watch/reload** for long-lived processes — resolution is eager at `Load`
+  ([overview.md](overview.md) §8), so re-reading on change is a separate,
+  post-v1 concern.
+
+**Rejected (will not be added):**
+
+- **`LoadOptional` / silent-absence loading.** There is deliberately **no**
+  variant that returns `nil` or keeps defaults when a requested file is absent.
+  flexconf is fail-loud: a `name` that **no** layer provides is always
+  `ErrConfigNotFound` (§3). "Succeed silently when the file is missing"
+  contradicts that principle, so it is out — now and permanently — not a
+  candidate for a later release.
