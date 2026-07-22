@@ -15,13 +15,16 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+
+	"github.com/sylvanld/go-flexconf/internal/variant"
 )
 
 // Loader reads config files from an ordered list of directories, lowest to
 // highest precedence. It is safe for concurrent Load calls.
 type Loader struct {
-	dirs []string
-	opts loaderOptions
+	dirs       []string
+	opts       loaderOptions
+	registries []variant.Binder // WithRegistry overrides for variant routing
 }
 
 // loaderOptions collects the tunable Loader behaviour; populated by Options.
@@ -114,6 +117,7 @@ func (l *Loader) Load(name string, dst any) error {
 	temp.Elem().Set(elem)
 	b := &binder{loader: l}
 	if err := b.bindStruct(tree, temp.Elem(), ""); err != nil {
+		b.rollback() // discard variant instances registered by this attempt
 		return err
 	}
 	elem.Set(temp.Elem())

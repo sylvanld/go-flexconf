@@ -189,5 +189,6 @@ func (l *Loader) resolveScalar(n *node, path string) error {
 		n.value, n.tag = strings.Join(resolved, ""), "!!str"
 	}
 	n.secret = n.secret || secret
+	n.substituted = true
 	return nil
 }

@@ -18,7 +18,8 @@ type Validator interface {
 
 // binder walks the resolved value tree and assigns it onto Go values.
 type binder struct {
-	loader *Loader // access to variant routing (later PRs); may be nil in tests
+	loader      *Loader // access to variant routing; may be nil in tests
+	touchedRegs []touchedRegistry
 }
 
 // bindStruct binds the merged tree onto the destination struct value
