@@ -29,6 +29,11 @@ When code and spec disagree, the spec wins. Reconcile them explicitly.
 
 - Keep [`docs/specs/README.md`](docs/specs/README.md) up to date: every spec
   file must have an entry in its index, with a one-line summary.
+- **Register every spec in the docs site nav.** Each spec file must have a
+  corresponding entry under the `Specs` section of the `nav` in
+  [`docs/zensical.toml`](docs/zensical.toml), or it will not appear on the
+  published site. When you add, rename, or remove a spec, update the `nav` in
+  the same change (and keep it consistent with the README index).
 - One spec file per coherent topic (e.g. config loading, templating, secret
   drivers). Prefer splitting over one giant file.
 - Each spec should state its **status** (`Draft`, `Accepted`, `Superseded`) at
