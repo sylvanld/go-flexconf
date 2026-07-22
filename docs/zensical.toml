@@ -53,6 +53,7 @@ nav = [
   { "Reference" = [
     { "flexconf loader" = "reference/flexconf.md" },
     { "Schema & binding" = "reference/schema.md" },
+    { "Templating & resolvers" = "reference/templating.md" },
     { "flexprompt" = "reference/flexprompt.md" },
     { "flexvault" = "reference/flexvault.md" },
   ] },
