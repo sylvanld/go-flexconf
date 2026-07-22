@@ -17,10 +17,10 @@ import (
 
 // Environment markers used by the self-exec spawn (§cli.md 6.2).
 const (
-	envMarker  = "FLEXCLI_AGENT"        // = VaultID: this process is an agent
-	envVault   = "FLEXCLI_AGENT_VAULT"  // target vault name (registry key)
+	envMarker  = "FLEXCLI_AGENT"         // = VaultID: this process is an agent
+	envVault   = "FLEXCLI_AGENT_VAULT"   // target vault name (registry key)
 	envIdle    = "FLEXCONF_IDLE_TIMEOUT" // idle auto-lock duration (Go string)
-	envRuntime = "FLEXCONF_RUNTIME_DIR" // test override for the runtime dir
+	envRuntime = "FLEXCONF_RUNTIME_DIR"  // test override for the runtime dir
 )
 
 // runtimeDir returns the user-private directory holding agent sockets:
