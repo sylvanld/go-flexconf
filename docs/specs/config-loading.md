@@ -5,7 +5,7 @@
   layers), the **Loader** and its `Load(name, &dst)` method, how the same-named
   file is **merged** across layers, and the **load lifecycle** (read → merge →
   resolve → bind → validate). The token grammar and resolution live in
-  _templating.md_ and _resolvers.md_; struct binding, defaults, `required`, and
+  [templating.md](templating.md) and [resolvers.md](resolvers.md); struct binding, defaults, `required`, and
   validation rules live in _schema-and-binding.md_. Secret backends are in
   [vault-drivers.md](vault-drivers.md) and [vault-registry.md](vault-registry.md).
 
@@ -35,8 +35,8 @@ if err := ld.Load("agents.yaml", &agents); err != nil { /* … */ }
 ```
 
 **Environment variables are not a config layer.** They participate only as
-`$(env:...)` tokens resolved inside config *values* (see _templating.md_ /
-_resolvers.md_), never as an implicit overriding source in the directory merge.
+`$(env:...)` tokens resolved inside config *values* (see [templating.md](templating.md) /
+[resolvers.md](resolvers.md)), never as an implicit overriding source in the directory merge.
 This keeps the merge input to exactly the files on disk, so what a directory
 contributes is unambiguous. (The app config directories here are distinct from
 the **vault registry** at `~/.config/flexconf/vaults.yaml`, [vault-registry.md](vault-registry.md);
@@ -134,7 +134,13 @@ func (l *Loader) Load(name string, dst any) error
 `Load(name, &dst)` runs a fixed sequence ([overview.md](overview.md) §3):
 
 1. **Read** — locate `name` in each layer and parse each present copy into a
-   value tree (format by extension, §2).
+   value tree (format by extension, §2). Any `$(config:path)` **includes** in a
+   file are expanded here, before merge — splicing the referenced YAML tree in
+   place (no deep-merge), with cycle detection and a depth cap
+   ([templating.md](templating.md) §7). Includes compose *different* files within
+   one logical config and are a **distinct axis** from the directory layering of
+   §3 (which merges the *same* file across dirs); the two combine — each layer's
+   file is fully include-expanded first, then layers merge.
    1a. **Per-file shape validation** — validate each parsed layer's tree against
    `dst`'s schema, checking the **shape** (map / scalar / sequence) of the keys it
    contains. A file whose value shape contradicts the field's kind is a config
@@ -146,7 +152,7 @@ func (l *Loader) Load(name string, dst any) error
 3. **Resolve** — expand `$(scheme:path)` tokens in string values via the
    registered resolvers (`env`, `secret`, …). `secret:` delegates to the selected
    vault ([vault-registry.md](vault-registry.md), [vault-drivers.md](vault-drivers.md)). Details:
-   _templating.md_, _resolvers.md_.
+   [templating.md](templating.md), [resolvers.md](resolvers.md).
 4. **Bind** — map the resolved tree onto `dst`'s fields (struct tags, defaults).
    A resolved value binds to the **field's type** exactly as the same literal
    would: `"8080"`→`int`, `"30s"`→`time.Duration`, `"true"`→`bool`. This applies

@@ -53,6 +53,7 @@ nav = [
     { "Specs index" = "specs/README.md" },
     { "Architecture overview" = "specs/overview.md" },
     { "Configuration loading" = "specs/config-loading.md" },
+    { "Templating" = "specs/templating.md" },
     { "Prompting" = "specs/prompter.md" },
     { "Vault drivers & manager" = "specs/vault-drivers.md" },
     { "Vault registry & references" = "specs/vault-registry.md" },

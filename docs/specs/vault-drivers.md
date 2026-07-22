@@ -14,7 +14,7 @@ the backend-specific implementation (KeePass first; HashiCorp Vault, cloud
 secret managers, encrypted files later). A **manager** wraps a single driver and
 is the object the rest of flexconf (and application code) uses. The manager is
 what ultimately backs the `secret:` templating scheme (see
-[overview.md](overview.md) §5 and _templating.md_).
+[overview.md](overview.md) §5 and [templating.md](templating.md)).
 
 > **Packages.** The types in this spec live in the module's `flexvault`
 > package (see [overview.md](overview.md), "Module layout"): `flexvault` owns
@@ -512,7 +512,7 @@ How a driver name and its config are chosen at runtime — the **named vault
 registry**, its layering, the **default vault**, and the `$(secret:[vault:]...)`
 reference syntax — is specified in [vault-registry.md](vault-registry.md). The resolver-side
 wiring (how the `secret:` scheme drives the selected `Manager`) is deferred to
-_resolvers.md_. This section exists so the interface above is designed with
+[resolvers.md](resolvers.md). This section exists so the interface above is designed with
 selection in mind.
 
 ## 10. KeePass driver — first implementation

@@ -190,7 +190,7 @@ Parsing rules (normative):
 - `$(secret:...)` MUST NOT appear inside a `VaultConf` (§2.3).
 
 The full normative token grammar (escaping, nesting, combining with literal
-text) lives in _templating.md_; this section fixes only the vault-selection
+text) lives in [templating.md](templating.md); this section fixes only the vault-selection
 part.
 
 ## 6. Vault identity & agents: `VaultID`

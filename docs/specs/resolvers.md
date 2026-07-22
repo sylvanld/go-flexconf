@@ -6,7 +6,7 @@
   register, and — the core of this spec — how the **`secret:` scheme reaches a
   vault through the background agent**, spawning and unlocking one the same way
   the CLI does when none is running. The token *grammar* (delimiters, escaping,
-  nesting, where a token may appear) lives in _templating.md_; this spec covers
+  nesting, where a token may appear) lives in [templating.md](templating.md); this spec covers
   what a resolver *does* with a token's `path`. Vault selection syntax
   (`[vault:]namespace/key`) is defined in [vault-registry.md](vault-registry.md) §5; the
   `Manager`/`VaultDriver` mechanics in [vault-drivers.md](vault-drivers.md).
@@ -42,7 +42,7 @@ type Resolver interface {
 ```
 
 - A resolved value is **inert**: it is never re-scanned for tokens (a `$(...)`
-  inside a secret is literal). This is fixed in _templating.md_ and restated here
+  inside a secret is literal). This is fixed in [templating.md](templating.md) and restated here
   because it is a resolver-visible guarantee.
 - Resolvers are the **only** thing that turns a token into a value; binding,
   merging, and validation never see the token, only its resolved string.
@@ -89,11 +89,11 @@ $(env:NAME)
   [missing.md](missing.md) §2.7). Built-in default reads `os.LookupEnv`.
 - `NAME` is opaque to flexconf; no interpolation or nesting inside it.
 
-> **Deferred — `$(env:NAME:-default)`.** An env-only default (missing var →
-> literal default) is proposed in [missing.md](missing.md) §1.6. It is a
-> **grammar** decision and is owned by _templating.md_; until decided, a missing
-> env var is a hard error as above. `secret:` and `file:` have **no** defaulting
-> regardless.
+> **Decided — no `$(env:NAME:-default)`.** An env-only default (missing var →
+> literal default, proposed in [missing.md](missing.md) §1.6) is **rejected**: a
+> missing env var is always a hard error (above), and no scheme has defaulting
+> syntax ([templating.md](templating.md) §10). Supply fallbacks via config-file
+> defaults in the schema/binding layer instead.
 
 ## 4. `file:` — file contents
 
@@ -250,7 +250,7 @@ unchanged — only the code's home moves.
   ([config-loading.md](config-loading.md) §5). A value introduced by a
   higher-precedence layer may itself contain a token.
 - Tokens are resolved independently; a resolved value is not re-scanned
-  (§1, _templating.md_). There is therefore no defined inter-token order and no
+  (§1, [templating.md](templating.md)). There is therefore no defined inter-token order and no
   token-to-token data flow.
 - Within one `Load`, vault unlocks (hence prompts) are **serialized** — at most
   one `Dispatch` runs at a time ([config-loading.md](config-loading.md) §4,
@@ -296,10 +296,6 @@ var (
 
 ## 9. Open questions / deferred
 
-- **`$(env:NAME:-default)`** — grammar decision owned by _templating.md_
-  ([missing.md](missing.md) §1.6).
-- **`$(config:path)` includes** — composition token; owned by _templating.md_ +
-  [config-loading.md](config-loading.md) ([missing.md](missing.md) §1.1).
 - **Redaction / taint dump format** — this spec *produces* the taint on every
   `secret:` value; the `Dump()`/`«redacted»` mechanism is owned by _redaction.md_
   ([missing.md](missing.md) §1.2).

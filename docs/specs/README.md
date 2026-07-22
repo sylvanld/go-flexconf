@@ -52,7 +52,7 @@ See [overview.md](overview.md) "Module layout" for the normative description.
 | [overview.md](overview.md) | 📝&nbsp;Draft | Architecture, core concepts, glossary, and how the pieces fit together. |
 | [config-loading.md](config-loading.md) | 📝&nbsp;Draft | Config directories as layers, the `Loader` and `Load(name, &struct)`, merge precedence, formats, and the load lifecycle. |
 | _schema-and-binding.md_ | 🚧&nbsp;TODO | How apps declare config structure and how loaded values bind to Go types (tags, defaults, required, validation). |
-| _templating.md_ | 🚧&nbsp;TODO | Token grammar (`$(scheme:path)`), escaping, nesting, and resolution order. |
+| [templating.md](templating.md) | 📝&nbsp;Draft | Token grammar (`$(scheme:path)`), the node-tree substitution model, escaping (`$$(`), no-nesting rule, resolved-scalar typing, and the `$(config:path)` include/splice token. |
 | [prompter.md](prompter.md) | ✅&nbsp;Accepted | The `flexprompt` package: the `Prompter` interface, `PromptRequest`, the process-wide singleton, built-in prompters, and prompter errors. |
 | [vault-drivers.md](vault-drivers.md) | ✅&nbsp;Accepted | The `VaultDriver` interface, the `Manager` (unlock/get/set/list) and its dispatch to the `Prompter`, `namespace/key` addressing, and the KeePass driver. |
 | [vault-registry.md](vault-registry.md) | 📝&nbsp;Draft | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |

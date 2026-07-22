@@ -68,13 +68,13 @@ Resolver), not the directory merge. Details: _config-loading.md_.
 
 A placeholder embedded in a config **value** with the grammar
 `$(scheme:path)`, e.g. `$(env:HOME)`, `$(secret:artifactory/token)`. Tokens are
-resolved after layers are merged and before binding. Details: _templating.md_.
+resolved after layers are merged and before binding. Details: [templating.md](templating.md).
 
 ### Resolver
 
 The component that resolves a token for a given **scheme**. `env` and `secret`
 are built in; custom schemes can be registered. A resolver maps a `path` to a
-concrete value. Details: _resolvers.md_.
+concrete value. Details: [resolvers.md](resolvers.md).
 
 ### Vault driver
 
@@ -116,23 +116,34 @@ _config-loading.md_ and _api.md_.
 
 Resolution order matters: tokens are resolved on the *merged* tree, so a value
 introduced by a higher-precedence layer can itself contain a token. Nesting and
-escaping rules are defined in _templating.md_.
+escaping rules are defined in [templating.md](templating.md).
 
 ## 4. Token grammar summary
 
-Normative grammar lives in _templating.md_; summarized here for orientation.
+Normative grammar lives in [templating.md](templating.md); summarized here for
+orientation.
 
 - A token has the form `$(scheme:path)`.
 - `scheme` selects a resolver; `path` is opaque to flexconf and interpreted by
   that resolver.
 - Built-in schemes:
-  - `env:NAME` — value of environment variable `NAME`.
+  - `env:NAME` — value of environment variable `NAME`. A missing variable is a
+    hard error; there is **no** `:-default` syntax ([templating.md](templating.md) §10).
   - `secret:[vault:]namespace/key` — value fetched for that two-level secret
     address (see _vault-drivers.md_ §6). An optional leading `vault:` segment
     selects a named vault from the registry; omitting it uses the default vault
     (see _vault-registry.md_ §4–§5).
-- Tokens may appear anywhere inside a string value and may be combined with
-  literal text: `url: https://$(env:HOST):$(env:PORT)/api`.
+  - `file:path` — verbatim contents of a file (relative to the containing config
+    file); non-secret (see [resolvers.md](resolvers.md) §4).
+  - `config:path.yaml` — **structural include**: splices another YAML file's tree
+    in as the whole value (no deep-merge); a different composition axis from
+    directory layering ([templating.md](templating.md) §7).
+- Scalar tokens (`env`/`secret`/`file`) may appear anywhere inside a string value
+  and be combined with literal text: `url: https://$(env:HOST):$(env:PORT)/api`.
+  `config:` must be a **whole value**. Templating operates on the parsed node
+  tree (values only, never keys; resolved values are inert), and a whole-value
+  token is left untagged so its type is inferred from the resolved content
+  ([templating.md](templating.md) §2, §6).
 
 ## 5. Vault driver selection summary
 
