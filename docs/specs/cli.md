@@ -4,7 +4,7 @@
 - **Scope:** the `flexcli` package — a mountable Cobra command group `secret`
   (`init`/`unlock`/`lock`/`get`/`set`/`list`/`vaults`) — its two entry points (**embedded**
   in an app's CLI; and a **standalone `flexconf` binary** for global/personal
-  vaults), both backed by the same vault registry ([vaults.md](vaults.md)), and
+  vaults), both backed by the same vault registry ([vault-registry.md](vault-registry.md)), and
   the background **secret agent** that
   holds an unlocked vault in memory (ssh-agent style) with an idle auto-lock.
   Non-secret config-loading commands, shell completion, and non-Unix transports
@@ -16,7 +16,7 @@ the exact same command group** (§4):
 
 1. **Embedded** — an application mounts the `secret` group into its own
    [Cobra](https://github.com/spf13/cobra) CLI; vault definitions come from the
-   vault registry ([vaults.md](vaults.md)), with the app optionally pinning a
+   vault registry ([vault-registry.md](vault-registry.md)), with the app optionally pinning a
    default vault (`myapp secret get artifactory/token`).
 2. **Standalone** — the module ships a `flexconf` binary that mounts the same
    group against the same registry (default: the user's global default vault), for
@@ -50,7 +50,7 @@ See [overview.md](overview.md) "Module layout".
 
 Both entry points read vault definitions from the **same single source** — the
 vault **registry** (`~/.config/flexconf/vaults.yaml`, layered per
-[vaults.md](vaults.md) §3). Neither reads vault config from an application's own
+[vault-registry.md](vault-registry.md) §3). Neither reads vault config from an application's own
 `config.yaml`: an app's config holds app settings and `$(secret:…)` tokens only,
 and the registry is the **sole** home for vault definitions (there is no
 "integrated mode" in which an app bundles vault config).
@@ -60,14 +60,14 @@ The two entry points therefore differ only in:
 | | Embedded (`myapp secret …`) | Standalone (`flexconf secret …`) |
 |---|---|---|
 | Binary / mount | the `secret` group mounted into the app's own CLI | the shipped `flexconf` binary |
-| Vault **config** source | the vault registry ([vaults.md](vaults.md)) | the **same** vault registry |
+| Vault **config** source | the vault registry ([vault-registry.md](vault-registry.md)) | the **same** vault registry |
 | Which vault is default | the app MAY pin one via `Options.DefaultVault`; else the registry's `default:` | the registry's `default:` |
 | Vault **secret** (master pw) | prompted at unlock (never in config) | prompted at unlock (never in config) |
 
 In both, the root `--vault <name>` flag (§4) selects a named vault, overriding the
 default. A vault definition is always a static registry entry: it MUST NOT contain
 any templating tokens (`$(...)`) — see the static-definitions rule in
-[vaults.md](vaults.md) §2.3.
+[vault-registry.md](vault-registry.md) §2.3.
 
 ## 3. Embedded entry point
 
@@ -96,14 +96,14 @@ package flexcli
 
 type Options struct {
     // DefaultVault pins which registry vault is used when the --vault flag is not
-    // given. Empty → the registry's own default: (vaults.md §4). The named vault
+    // given. Empty → the registry's own default: (vault-registry.md §4). The named vault
     // (and its driver + non-secret config) is always read from the registry
-    // (vaults.md); an app never supplies vault config here.
+    // (vault-registry.md); an app never supplies vault config here.
     DefaultVault string
 
     // VaultID overrides the socket/agent identity for the selected vault. Empty →
     // derived deterministically from the vault NAME + a fingerprint of its
-    // resolved config (§6.3, vaults.md §6). Distinct vaults get distinct agents.
+    // resolved config (§6.3, vault-registry.md §6). Distinct vaults get distinct agents.
     VaultID string
 
     // IdleTimeout is how long the agent stays unlocked with no request before it
@@ -146,7 +146,7 @@ scheme in §9 (`0` success / `1` generic / `2` usage / `3` locked).
 **Vault selection — the `--vault` flag.** `--vault <name>` is a **persistent flag
 at the CLI root**, inherited by every `secret` subcommand
 (`get`/`set`/`list`/`unlock`/`lock`/`status`). It names a vault in the registry
-([vaults.md](vaults.md)) and **overrides** the default vault
+([vault-registry.md](vault-registry.md)) and **overrides** the default vault
 (`Options.DefaultVault`, else the registry's `default:`). It is the **single**
 mechanism for choosing a vault — there is no positional vault argument on any
 subcommand. `myapp --vault work secret get deploy/key` and
@@ -238,17 +238,17 @@ spawning/keeping an agent.
 
 Show the **resolved vault registry** — which registry files were consulted, in
 what order, and the merged result — so a user can see *why* a vault name maps to
-a given backend. It reads only the registry ([vaults.md](vaults.md) §2–§4); it
+a given backend. It reads only the registry ([vault-registry.md](vault-registry.md) §2–§4); it
 does **not** build drivers, contact the agent, or unlock anything.
 
 - Prints, in order:
-  1. the **registry files** consulted (§5.1, [vaults.md](vaults.md) §3), each
+  1. the **registry files** consulted (§5.1, [vault-registry.md](vault-registry.md) §3), each
      marked `[ok]` / `[missing]` and annotated with its source (the well-known
      file, or its position in `FLEXCONF_VAULTS`);
   2. the resolved **`default:`** and which file set it;
   3. each **vault**: name, `driver`, its config keys, and the file it was defined
      in — noting when a later file **overrode** an earlier definition of the same
-     name (whole-entry replacement, [vaults.md](vaults.md) §3).
+     name (whole-entry replacement, [vault-registry.md](vault-registry.md) §3).
 - `--format yaml` emits the merged registry as a machine-readable YAML document
   (the plain resolved registry, suitable to save back as a `vaults.yaml`);
   provenance annotations appear only in the default human format. (Other output
@@ -262,10 +262,10 @@ does **not** build drivers, contact the agent, or unlock anything.
   become **errors** and the command exits **non-zero** — making it usable as a CI
   check on a registry. Without the flag the checks are informational only. (These
   conditions also fail loudly when a token actually resolves against the registry
-  at load time, per [vaults.md](vaults.md) §4; `--validate` just brings that
+  at load time, per [vault-registry.md](vault-registry.md) §4; `--validate` just brings that
   check forward without resolving anything.)
 - Output is safe to share/paste: the registry never contains credentials
-  ([vaults.md](vaults.md) §2.1), so there is nothing to redact.
+  ([vault-registry.md](vault-registry.md) §2.1), so there is nothing to redact.
 
 ```console
 $ flexconf secret vaults
@@ -316,9 +316,9 @@ func main() {
 ```go
 // GlobalOptions builds Options for the standalone flexconf CLI (and for any app
 // that wants to expose the user's global vault). Vault DEFINITIONS always come
-// from the vault registry (vaults.md); GlobalOptions itself only carries process
+// from the vault registry (vault-registry.md); GlobalOptions itself only carries process
 // options (idle timeout, prompter). Which vault is used is the registry's
-// default: (vaults.md §4), overridden at runtime by the --vault root flag (§4).
+// default: (vault-registry.md §4), overridden at runtime by the --vault root flag (§4).
 //
 // As an escape hatch for running WITHOUT a registry file, --driver plus driver
 // flags (e.g. --path), or the corresponding FLEXCONF_* env vars, synthesize an
@@ -332,23 +332,23 @@ func GlobalOptions() (Options, error)
 ### 5.1 Global config file
 
 The global vault definitions are the **vault registry** specified normatively in
-[vaults.md](vaults.md); this section only describes how the standalone CLI reads
+[vault-registry.md](vault-registry.md); this section only describes how the standalone CLI reads
 it.
 
 - **Location:** `$XDG_CONFIG_HOME/flexconf/vaults.yaml` (default
   `~/.config/flexconf/vaults.yaml`); the file is YAML. See
-  [vaults.md](vaults.md) §2.2. (CLI-only preferences, if any, stay in a separate
+  [vault-registry.md](vault-registry.md) §2.2. (CLI-only preferences, if any, stay in a separate
   `config.yaml`; vault definitions live only in the registry.)
 - **Named vaults** so a user can keep several; each is a driver + its non-secret
   config, with a top-level `default:`. Master passwords are **never** stored
-  here. Layering across registry files follows [vaults.md](vaults.md) §3.
+  here. Layering across registry files follows [vault-registry.md](vault-registry.md) §3.
 
 ```yaml
 default: personal
 vaults:
   personal:
     driver: keepass
-    path: ~/.local/share/flexconf/personal.kdbx   # static; no $(...) tokens (vaults.md §2.3)
+    path: ~/.local/share/flexconf/personal.kdbx   # static; no $(...) tokens (vault-registry.md §2.3)
     readonly: false
   work:
     driver: keepass
@@ -413,7 +413,7 @@ hits `App.RunAgentIfRequested()` at the top of `main`, sees the marker, and runs
 the agent loop. This is why `RunAgentIfRequested()` MUST be first in `main`.
 
 The agent reconstructs its vault's non-secret config by **re-reading the registry
-itself** (`vaults.yaml`, [vaults.md](vaults.md)) for the `VaultID`'s vault — a
+itself** (`vaults.yaml`, [vault-registry.md](vault-registry.md)) for the `VaultID`'s vault — a
 durable file, so reproduction is automatic and no vault config is forwarded over
 the socket. (For an anonymous **ad-hoc** vault (§5.1) there is no registry entry,
 so the defining `--driver`/`--path`/`FLEXCONF_*` values are carried through the
@@ -444,7 +444,7 @@ on the next successful start.
   `agent-work-3f9a1c02.sock`. The name makes sharing an agent explicit
   (`--vault work` targets the `work` agent); the fingerprint keeps a same-named
   but differently-resolved vault (e.g. a project-local override) on its own agent.
-  MUST NOT include secret material. See [vaults.md](vaults.md) §6. (This
+  MUST NOT include secret material. See [vault-registry.md](vault-registry.md) §6. (This
   supersedes the earlier config-hash-only default.)
 - **Stale sockets:** on startup the agent unlinks a pre-existing socket only after
   confirming nothing answers (connect → refused). On clean exit it removes its
@@ -491,12 +491,12 @@ on the next successful start.
 
 A single `secret` **command** targets **one** vault per invocation, selected via
 the `--vault` root flag (§4), defaulting to the registry's default vault
-([vaults.md](vaults.md) §4). Each named vault gets its own `VaultID`, hence its
+([vault-registry.md](vault-registry.md) §4). Each named vault gets its own `VaultID`, hence its
 own agent (§6.3), so vaults coexist without colliding.
 
 Config **loading** (as opposed to the CLI) already addresses *multiple* vaults
 in one pass: each `$(secret:vault:...)` token selects its vault by name
-([vaults.md](vaults.md) §5), resolving against as many agents as it references.
+([vault-registry.md](vault-registry.md) §5), resolving against as many agents as it references.
 A multi-vault-in-one-**command** CLI UX (e.g. bulk operations across vaults)
 remains deferred.
 
@@ -568,7 +568,7 @@ uses the same running agent if present, or unlocks per the loader's policy.
 - **Vault selection** — `--vault <name>` persistent root flag overrides the
   default vault; no positional vault argument (§4, Decision).
 - **Global config** — user-level vault **registry** at
-  `~/.config/flexconf/vaults.yaml` ([vaults.md](vaults.md)); precedence
+  `~/.config/flexconf/vaults.yaml` ([vault-registry.md](vault-registry.md)); precedence
   flags > env > registry files > defaults; secrets never stored (§5).
 - **Vault creation** — `secret init` via `flexvault.Initializer` + double-entry
   new password (§4, vault-drivers §4).
@@ -577,7 +577,7 @@ uses the same running agent if present, or unlocks per the loader's policy.
 - **Registry inspection** — `secret vaults` dumps the resolved registry and file
   provenance (dump-only, always exits 0); `--validate` opts into enforcement and
   a non-zero exit for CI use (§4). This resolves the registry-inspection item
-  deferred in [vaults.md](vaults.md) §8.
+  deferred in [vault-registry.md](vault-registry.md) §8.
 
 ## 12. Out of scope / deferred
 

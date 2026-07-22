@@ -55,7 +55,7 @@ nav = [
     { "Configuration loading" = "specs/config-loading.md" },
     { "Prompting" = "specs/prompter.md" },
     { "Vault drivers & manager" = "specs/vault-drivers.md" },
-    { "Vault registry & references" = "specs/vaults.md" },
+    { "Vault registry & references" = "specs/vault-registry.md" },
     { "CLI & secret agent" = "specs/cli.md" },
     { "Candidate features" = "specs/missing.md" },
   ] },

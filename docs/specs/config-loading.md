@@ -7,7 +7,7 @@
   resolve → bind → validate). The token grammar and resolution live in
   _templating.md_ and _resolvers.md_; struct binding, defaults, `required`, and
   validation rules live in _schema-and-binding.md_. Secret backends are in
-  [vault-drivers.md](vault-drivers.md) and [vaults.md](vaults.md).
+  [vault-drivers.md](vault-drivers.md) and [vault-registry.md](vault-registry.md).
 
 ## 1. Model: config directories as layers
 
@@ -39,7 +39,7 @@ if err := ld.Load("agents.yaml", &agents); err != nil { /* … */ }
 _resolvers.md_), never as an implicit overriding source in the directory merge.
 This keeps the merge input to exactly the files on disk, so what a directory
 contributes is unambiguous. (The app config directories here are distinct from
-the **vault registry** at `~/.config/flexconf/vaults.yaml`, [vaults.md](vaults.md);
+the **vault registry** at `~/.config/flexconf/vaults.yaml`, [vault-registry.md](vault-registry.md);
 that registry is not loaded through this Loader.)
 
 > **Not to be confused with `EnvDecoder`.** A *vault driver's own* non-secret
@@ -69,7 +69,7 @@ that registry is not loaded through this Loader.)
 - The Loader's directory list is ordered **lowest to highest precedence**: a
   **later** directory in the list overrides an **earlier** one. This matches the
   base-then-override mental model and the same "later wins" rule used by the vault
-  registry ([vaults.md](vaults.md) §3).
+  registry ([vault-registry.md](vault-registry.md) §3).
 - For a given `Load(name, …)`, each layer that **contains** `name` contributes;
   layers that do not are simply skipped (not an error).
 - A present-but-**empty** file counts as **present** (it satisfies the
@@ -87,7 +87,7 @@ Merging is over the parsed value tree of the *same* file across layers:
   retained.
 - **Scalars and sequences replace, never append.** A higher-precedence layer's
   list value replaces the lower layer's list wholesale (no element-wise merge),
-  mirroring the whole-entry rule in [vaults.md](vaults.md) §3 and avoiding
+  mirroring the whole-entry rule in [vault-registry.md](vault-registry.md) §3 and avoiding
   order-dependent surprises.
 - Merging happens **before** token resolution, so a value introduced by a
   higher-precedence layer may itself contain a token ([overview.md](overview.md)
@@ -145,7 +145,7 @@ func (l *Loader) Load(name string, dst any) error
 2. **Merge** — combine the per-layer trees by precedence into one raw tree (§3).
 3. **Resolve** — expand `$(scheme:path)` tokens in string values via the
    registered resolvers (`env`, `secret`, …). `secret:` delegates to the selected
-   vault ([vaults.md](vaults.md), [vault-drivers.md](vault-drivers.md)). Details:
+   vault ([vault-registry.md](vault-registry.md), [vault-drivers.md](vault-drivers.md)). Details:
    _templating.md_, _resolvers.md_.
 4. **Bind** — map the resolved tree onto `dst`'s fields (struct tags, defaults).
    A resolved value binds to the **field's type** exactly as the same literal
@@ -185,7 +185,7 @@ var (
 
 - **Directory discovery vs. explicit list.** v1 takes an explicit `dirs` list;
   whether to add well-known/XDG discovery or an env override (à la
-  `FLEXCONF_VAULTS`, [vaults.md](vaults.md) §3) is deferred.
+  `FLEXCONF_VAULTS`, [vault-registry.md](vault-registry.md) §3) is deferred.
 - **Optional vs. required files per call.** A `LoadOptional` variant (return
   nil / leave defaults when absent) may complement the fail-loud `Load`.
 - **Additional file formats** (TOML/JSON, …) — deferred; v1 is YAML-only (§2),

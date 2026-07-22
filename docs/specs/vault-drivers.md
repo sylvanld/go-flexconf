@@ -119,7 +119,7 @@ differently on purpose:
 **How is vault config sourced?** The driver does not decide — it just calls
 `decode(&itsConfigStruct)`. The **host** binds `decode` to a source. Vault
 definitions live in **one** place — the vault **registry**
-(`~/.config/flexconf/vaults.yaml`, [vaults.md](vaults.md)); apps do **not** define
+(`~/.config/flexconf/vaults.yaml`, [vault-registry.md](vault-registry.md)); apps do **not** define
 vaults in their own `config.yaml`. So in the normal flexconf flow the host binds
 `decode` to the selected vault's sub-tree of the registry (the `VaultConf`'s
 driver keys). For standalone/programmatic use without a registry file, `flexvault`
@@ -131,7 +131,7 @@ environment variables — the *same* driver code either way.
 vaults:
   personal:
     driver: keepass
-    path: ~/secrets.kdbx   # static; no $(...) tokens (vaults.md §2.3)
+    path: ~/secrets.kdbx   # static; no $(...) tokens (vault-registry.md §2.3)
     readonly: true
 # the master password is NOT here — it is requested via the Prompter at unlock time
 ```
@@ -144,7 +144,7 @@ its values are read literally and it MUST NOT contain any templating tokens
 (`$(...)`) — neither `$(env:...)` nor `$(secret:...)`. `$(secret:...)` could
 never work (the vault is what resolves `secret:`), and `$(env:...)` is excluded
 so a definition shared across contexts behaves identically everywhere. This is
-the static-definitions rule in [vaults.md](vaults.md) §2.3; see it for the
+the static-definitions rule in [vault-registry.md](vault-registry.md) §2.3; see it for the
 rationale and the `~`-expansion allowance.
 
 ## 3. Credential collection via the Prompter
@@ -458,7 +458,7 @@ A secret is **a single string value** — not a structured record. `Get` returns
 `string` and `Set` takes a `string`; `$(secret:namespace/key)` resolves to that
 string. Backends that store richer entries (a KeePass entry has username, URL,
 notes, …) expose only the primary value through flexconf; secondary fields are
-not addressable (see [vaults.md](vaults.md) §5).
+not addressable (see [vault-registry.md](vault-registry.md) §5).
 
 - For KeePass the value is the entry's `Password` field.
 - Secret values and credential answers are `string` in v1. Go strings cannot be
@@ -510,7 +510,7 @@ func New(name string) (VaultDriver, error)
 
 How a driver name and its config are chosen at runtime — the **named vault
 registry**, its layering, the **default vault**, and the `$(secret:[vault:]...)`
-reference syntax — is specified in [vaults.md](vaults.md). The resolver-side
+reference syntax — is specified in [vault-registry.md](vault-registry.md). The resolver-side
 wiring (how the `secret:` scheme drives the selected `Manager`) is deferred to
 _resolvers.md_. This section exists so the interface above is designed with
 selection in mind.
@@ -634,7 +634,7 @@ Out of scope here; noted so the interface doesn't preclude them:
 
 **Deferred (out of scope, not open design questions):**
 
-- **Multiple vaults** — *resolved* in [vaults.md](vaults.md): vaults are named
+- **Multiple vaults** — *resolved* in [vault-registry.md](vault-registry.md): vaults are named
   in a registry and a token selects one via a `vault:` segment
   (`$(secret:vault:namespace/key)`), defaulting to the registry's default
   vault. The resolver-side wiring remains in _resolvers.md_.

@@ -52,7 +52,7 @@ See [overview.md](overview.md) "Module layout" for the normative description.
 | _templating.md_ | 🚧&nbsp;TODO | Token grammar (`$(scheme:path)`), escaping, nesting, and resolution order. |
 | [prompter.md](prompter.md) | ✅&nbsp;Accepted | The `flexprompt` package: the `Prompter` interface, `PromptRequest`, the process-wide singleton, built-in prompters, and prompter errors. |
 | [vault-drivers.md](vault-drivers.md) | ✅&nbsp;Accepted | The `VaultDriver` interface, the `Manager` (unlock/get/set/list) and its dispatch to the `Prompter`, `namespace/key` addressing, and the KeePass driver. |
-| [vaults.md](vaults.md) | 📝&nbsp;Draft | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |
+| [vault-registry.md](vault-registry.md) | 📝&nbsp;Draft | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |
 | [cli.md](cli.md) | 📝&nbsp;Draft | The `flexcli` Cobra `secret` command group (incl. `secret vaults` registry inspection) and the background secret agent (ssh-agent style) with idle auto-lock. |
 | _resolvers.md_ | 🚧&nbsp;TODO | Built-in resolvers (`env`, `secret`, `file`, …) and how to register custom schemes. |
 | _api.md_ | 🚧&nbsp;TODO | Public Go API surface of the SDK. |

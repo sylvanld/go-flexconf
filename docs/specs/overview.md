@@ -130,7 +130,7 @@ Normative grammar lives in _templating.md_; summarized here for orientation.
   - `secret:[vault:]namespace/key` — value fetched for that two-level secret
     address (see _vault-drivers.md_ §6). An optional leading `vault:` segment
     selects a named vault from the registry; omitting it uses the default vault
-    (see _vaults.md_ §4–§5).
+    (see _vault-registry.md_ §4–§5).
 - Tokens may appear anywhere inside a string value and may be combined with
   literal text: `url: https://$(env:HOST):$(env:PORT)/api`.
 
@@ -142,7 +142,7 @@ Normative rules live in _vault-drivers.md_.
 - Vaults are **named** in a registry (`map[name]VaultConf`) and referenced by
   name; each name maps to a driver + its non-secret config. Definitions are
   layered across files and code, with a designated **default vault**. Details:
-  _vaults.md_.
+  _vault-registry.md_.
 - The `secret:` resolver delegates to whichever vault the token selects (the
   named one, else the default). Config authors never name the *backend* in
   tokens — only an optional logical *vault* name and the secret address
@@ -159,7 +159,7 @@ an optional CLI package. The split follows the dependency direction —
 | **`flexprompt`** | Credential/​input collection: the `Prompter` interface, `PromptRequest`, the process-wide singleton (`SetPrompter`/`GetPrompter`), built-in prompters (`NewCLIPrompter`, `NewMapPrompter`, `NewEnvPrompter`), and prompt errors. The module's **leaf** package. | (stdlib only) |
 | **`flexvault`** | Secret backends and their lifecycle: the `VaultDriver` interface, the `Manager` (unlock/get/set/list), `Capabilities`, the sentinel errors, driver registration (`Register`/`New`), the config decoders (`MapDecoder`/`EnvDecoder`), and concrete drivers under `flexvault/driver/*` (e.g. `flexvault/driver/keepass`). | `flexprompt` |
 | **`flexconf`** | Config loading: schema declaration and binding, config directories and layering, the templating engine, resolvers (`env`, `secret`, …), and the top-level `Loader`. The `secret:` resolver drives a `flexvault.Manager`. | `flexvault`, `flexprompt` |
-| **`flexcli`** *(optional)* | A mountable Cobra `secret` command group (`init`/`unlock`/`lock`/`get`/`set`/`list`) and the background **secret agent** that holds an unlocked vault in memory with an idle auto-lock. Mounted **embedded** in an app's CLI or via the shipped **`cmd/flexconf`** binary; both read vault definitions from the vault registry ([vaults.md](vaults.md)). Not needed for programmatic use. | `flexvault`, `flexprompt`, Cobra |
+| **`flexcli`** *(optional)* | A mountable Cobra `secret` command group (`init`/`unlock`/`lock`/`get`/`set`/`list`) and the background **secret agent** that holds an unlocked vault in memory with an idle auto-lock. Mounted **embedded** in an app's CLI or via the shipped **`cmd/flexconf`** binary; both read vault definitions from the vault registry ([vault-registry.md](vault-registry.md)). Not needed for programmatic use. | `flexvault`, `flexprompt`, Cobra |
 
 Rules:
 
@@ -195,13 +195,13 @@ the `flexprompt` `Prompter` in [prompter.md](prompter.md); `flexcli` in
 | **Prompter** | Abstraction for collecting credentials in one interaction (CLI, GUI, env, tests). Lives in the `flexprompt` package as a process-wide singleton (`SetPrompter`/`GetPrompter`); the Manager passes it the driver's declared requests. See _prompter.md_. |
 | **Vault config vs. vault secret** | A vault's non-secret settings (path, URL) vs. its credentials (password, token) — sourced and handled separately. See _vault-drivers.md_ §2.1. |
 | **Secret address** | A two-level `namespace/key` identifier for a secret (e.g. `artifactory/token`). See _vault-drivers.md_ §6. |
-| **Vault registry** | A layered map of vault `name → VaultConf` (driver + non-secret config) that names and configures vaults. See _vaults.md_. |
-| **Default vault** | The vault a `$(secret:...)` token resolves against when no `vault:` segment is given; set by the registry's `default:` key. See _vaults.md_ §4. |
-| **Vault reference** | The optional `vault:` segment in a token (`$(secret:vault:namespace/key)`) selecting a named vault. See _vaults.md_ §5. |
+| **Vault registry** | A layered map of vault `name → VaultConf` (driver + non-secret config) that names and configures vaults. See _vault-registry.md_. |
+| **Default vault** | The vault a `$(secret:...)` token resolves against when no `vault:` segment is given; set by the registry's `default:` key. See _vault-registry.md_ §4. |
+| **Vault reference** | The optional `vault:` segment in a token (`$(secret:vault:namespace/key)`) selecting a named vault. See _vault-registry.md_ §5. |
 | **Loader** | Orchestrator configured with ordered config dirs; `Load(name, &dst)`: read → merge → resolve → bind → validate for that named file. |
 | **Binding** | Mapping the resolved value tree onto the config schema types. |
 | **Secret agent** | Long-lived, ssh-agent-style background process (spawned by `flexcli`) that holds one unlocked vault in memory and serves `get`/`set`/`list` over a private socket, auto-locking after an idle timeout. See _cli.md_. |
-| **Global vault** | A user-level vault defined in the user's registry (`~/.config/flexconf/vaults.yaml`), independent of any app. See _vaults.md_ §2 and _cli.md_ §5. |
+| **Global vault** | A user-level vault defined in the user's registry (`~/.config/flexconf/vaults.yaml`), independent of any app. See _vault-registry.md_ §2 and _cli.md_ §5. |
 
 ## 8. Open questions
 

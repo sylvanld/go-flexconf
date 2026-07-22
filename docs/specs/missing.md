@@ -236,8 +236,8 @@ config**, templated **env-only first** and then **stripped** before the app
 decodes (bootstrap ordering: secrets can't reference secrets). The current spec
 deliberately moves all vault definitions to an external registry at
 `~/.config/flexconf/vaults.yaml` and **forbids** any inline definition
-([vaults.md](vaults.md) §2). [vault-drivers.md](vault-drivers.md) §2.1 does gesture
-at an "integrated mode," but [vaults.md](vaults.md) then bans it. **Confirm** the
+([vault-registry.md](vault-registry.md) §2). [vault-drivers.md](vault-drivers.md) §2.1 does gesture
+at an "integrated mode," but [vault-registry.md](vault-registry.md) then bans it. **Confirm** the
 registry-only stance — [T]'s in-config block is the more ergonomic single-file
 experience the originating project [C] actually uses. This is the sharpest
 design disagreement between spec and implementations.
@@ -268,9 +268,9 @@ For balance — the current spec is ahead of both codebases here, so these are
 *not* gaps:
 
 - **Named vault registry with a `vault:` token qualifier** and multiple vaults
-  addressable from one config ([vaults.md](vaults.md) §5) — neither project does
+  addressable from one config ([vault-registry.md](vault-registry.md) §5) — neither project does
   multi-vault.
-- **`VaultID` = name + fingerprint of resolved config** ([vaults.md](vaults.md)
+- **`VaultID` = name + fingerprint of resolved config** ([vault-registry.md](vault-registry.md)
   §6) — [T] keys the agent by app only.
 - **Directory layering** of the *same* file across ordered dirs
   ([config-loading.md](config-loading.md) §3) — [T] only has includes + per-key
