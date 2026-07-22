@@ -49,6 +49,7 @@ Copyright &copy; 2026 Sylvan Le Deunff
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
   { "Get started" = "index.md" },
+  { "Roadmap" = "roadmap.md" },
   { "Specs" = [
     { "Specs index" = "specs/README.md" },
     { "Architecture overview" = "specs/overview.md" },
