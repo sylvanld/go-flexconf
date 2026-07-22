@@ -46,8 +46,13 @@ if err := ld.Load("agents.yaml", &agents); err != nil { /* … */ }
 [resolvers.md](resolvers.md)), never as an implicit overriding source in the directory merge.
 This keeps the merge input to exactly the files on disk, so what a directory
 contributes is unambiguous. (The app config directories here are distinct from
-the **vault registry** at `~/.config/flexconf/vaults.yaml`, [vault-registry.md](vault-registry.md);
-that registry is not loaded through this Loader.)
+the **vault registry** at `~/.config/flexconf/vaults.yaml`,
+[vault-registry.md](vault-registry.md). The registry is *not* loaded through **this**
+Loader instance — its layer files come from the environment, not this `dirs` list
+— but it **is** loaded through the **same Loader pipeline** (§4.1): a static Loader
+with an **empty resolver set** ([resolvers.md](resolvers.md) §2.1). Config and
+registry thus share one loading mechanism; only the layer-source and resolver set
+differ.)
 
 > **Not to be confused with `EnvDecoder`.** A *vault driver's own* non-secret
 > config (a KeePass path, a server URL) is a separate concern that MAY be sourced
@@ -135,6 +140,37 @@ func (l *Loader) Load(name string, dst any) error
   written before the error — callers SHOULD treat `dst` as undefined when `Load`
   returns non-nil. (Whether binding is all-or-nothing is finalized in
   [schema-and-binding.md](schema-and-binding.md).)
+
+### 4.1 One pipeline, two front-ends
+
+The Loader is, at its core, a function over an **ordered list of concrete layer
+files**: read each → merge by precedence (§3) → resolve tokens → bind → validate
+(§5). The public `New(dirs...)` + `Load(name)` surface is one **front-end** onto
+that core: it *computes* the layer-file list as "`name` under each configured
+directory that contains it" (§2–§3).
+
+The **vault registry** is a second front-end onto the **same** core. It differs
+in exactly two configured inputs, both already first-class Loader concepts:
+
+- **Layer files come from the environment, not a `dirs`×`name` product.** The
+  ordered file list is the well-known `vaults.yaml`, or — when `FLEXCONF_VAULTS`
+  is set — its exhaustive list, applied left to right
+  ([vault-registry.md](vault-registry.md) §3). Same "later file wins" precedence
+  as §3; the list is just sourced differently.
+- **An empty resolver set** (`WithResolvers()`, [resolvers.md](resolvers.md) §2.1):
+  the registry is normatively static and cannot carry a `secret:` resolver
+  (circular), so it does no token resolution or `$(config:)` splicing at all.
+
+Everything else — YAML parse, per-file shape validation (§5 step 1a), the merge
+semantics of §3, bind, validate — is **identical**. In particular the registry's
+**whole-entry replacement** of a `VaultConf` across files
+([vault-registry.md](vault-registry.md) §3) is not a bespoke rule but a direct
+consequence of §3: a `VaultConf` binds as a **polymorphic** field (discriminated
+by `driver`, [vault-registry.md](vault-registry.md) §7), and §3 already replaces a
+polymorphic field wholesale in the higher layer rather than deep-merging it. The
+`vaults:` map deep-merges by name; each name's `VaultConf` replaces. The v1
+front-end for the registry's file-list construction is **internal** (no public
+file-list constructor); the *shared* part exposed publicly is `WithResolvers`.
 
 ## 5. Load lifecycle
 

@@ -33,6 +33,7 @@ func (l *Loader) Load(name string, dst any) error
 type Option
 
 func WithResolver(r Resolver) Option         // add/override a scheme for this Loader (resolvers §2)
+func WithResolvers(rs ...Resolver) Option    // REPLACE the default resolver set; empty = static Loader (resolvers §2, §2.1)
 func WithEnv(env func(string) (string, bool)) Option // env source for env: (resolvers §3) — IN v1
 func WithFS(fsys fs.FS) Option               // file source for file:/config: (resolvers §4) — IN v1
 func WithSecretPolicy(p SecretPolicy) Option // agent vs in-process (resolvers §5.3)

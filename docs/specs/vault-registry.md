@@ -116,8 +116,15 @@ literal.
 ## 3. Layering
 
 The effective registry is assembled from an **ordered list of registry files**;
-a later file overrides an earlier one. The list is determined entirely by the
-environment — never by application code:
+a later file overrides an earlier one. It is loaded through the **same Loader
+pipeline** that loads application config ([config-loading.md](config-loading.md)
+§4.1), configured as a **static** Loader — an **empty resolver set**
+([resolvers.md](resolvers.md) §2.1) — over this environment-derived file list. The
+static configuration is what makes the two hard rules of this spec fall out
+mechanically: the registry can hold no `$(...)` token (§2.3), and it cannot carry
+a `secret:` resolver (that would be circular, since `secret:` resolves *against*
+the registry). The list is determined entirely by the environment — never by
+application code:
 
 - **`FLEXCONF_VAULTS` unset:** the single well-known file (§2.2) is used, if it
   exists. A missing file simply yields an empty registry.
@@ -132,7 +139,12 @@ Override semantics (normative):
 - **Whole-entry replacement, never deep-merge.** If two files both define vault
   `foo`, the later file's `VaultConf` *replaces* the earlier one entirely.
   Driver and config keys are never merged across files — this avoids a
-  `VaultConf` with one file's `driver` and another file's `path`.
+  `VaultConf` with one file's `driver` and another file's `path`. This is **not**
+  a special-case merge rule: because a `VaultConf` binds as a **polymorphic** field
+  (discriminated by `driver`, §7), the shared pipeline's standard merge already
+  replaces it wholesale rather than deep-merging
+  ([config-loading.md](config-loading.md) §3, §4.1). The top-level `vaults:` map
+  deep-merges by name; each name's polymorphic `VaultConf` replaces.
 - The top-level `default:` (§4) follows the same rule: the last file that sets
   it wins.
 
@@ -246,15 +258,23 @@ This **supersedes** the config-hash `VaultID` default in
   application ([prompter.md](prompter.md)); every vault that needs
   to prompt for a credential at unlock uses that same prompter. The registry
   names and configures vaults; it does not carry prompting behaviour.
-- **Runs on the shared variant engine (matching only).** Name → `VaultConf`
-  resolution reuses the `internal/variant` matching engine
-  ([variants.md](variants.md) §10): the `driver` key is the discriminator, the map
-  key is the `name` selector, and a driver's extra keys are its strict sub-schema.
-  The registry's **own** rules are unchanged and stay outside that engine — file
-  loading and location (§2.2), layering (§3), the static/no-tokens rule (§2.3), the
-  default vault (§4), and the `VaultID` fingerprint (§6). The vault family is
-  **registry-only**: instances come from operator files, not app config, and bind
-  to no struct field.
+- **Runs on the shared loading + variant machinery.** Two independent reuses,
+  neither a bespoke registry codepath:
+    - **Loading** (read → merge → bind) runs on the shared **Loader pipeline**
+      configured static — empty resolver set — over the env-derived file list
+      ([config-loading.md](config-loading.md) §4.1, [resolvers.md](resolvers.md)
+      §2.1). This is where §3 layering and the whole-entry `VaultConf` replacement
+      (derived from polymorphic merge) come from.
+    - **Name → `VaultConf` matching** reuses the `internal/variant` matching engine
+      ([variants.md](variants.md) §10): the `driver` key is the discriminator, the
+      map key is the `name` selector, and a driver's extra keys are its strict
+      sub-schema.
+  Only the genuinely **registry-specific** rules stay outside both — file location
+  (§2.2), the environment-driven layer-source and static/no-tokens rule (§2.3,
+  §3), the default vault (§4), `~`/relative path normalization (§2.3, applied
+  post-bind, not a resolver), and the `VaultID` fingerprint (§6). The vault family
+  is **registry-only**: instances come from operator files, not app config, and
+  bind to no struct field.
 
 This section **resolves** the "Multiple vaults" item deferred in
 [vault-drivers.md](vault-drivers.md) §12 and [cli.md](cli.md) §7: a config can

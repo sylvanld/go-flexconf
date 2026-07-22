@@ -9,7 +9,7 @@ tags:
 
 - **Status:** ✅ Accepted
 - **Scope:** the `Resolver` abstraction, how the Loader invokes resolvers on the
-  merged tree, the built-in schemes (`env`, `secret`, `file`), how custom schemes
+  merged tree, the default resolvers (`env`, `secret`, `file`), how custom schemes
   register, and — the core of this spec — how the **`secret:` scheme reaches a
   vault through the background agent**, spawning and unlocking one the same way
   the CLI does when none is running. The token *grammar* (delimiters, escaping,
@@ -56,8 +56,11 @@ type Resolver interface {
 
 ## 2. Registration & the resolver set
 
-Built-in resolvers (`env`, `secret`, `file`) are present on every `Loader` by
-default. Two extension points, mirroring the vault-driver pattern
+The **default resolvers** — `env`, `secret`, `file` — are the resolver set `New`
+installs on every `Loader`. Throughout the specs these three are always the
+"default resolvers"; "resolver" unqualified means the abstraction of §1 (a default
+resolver, a custom-scheme resolver, or a Loader-scoped one), never specifically
+the built-in trio. Three extension points, mirroring the vault-driver pattern
 ([vault-drivers.md](vault-drivers.md) §9):
 
 ```go
@@ -65,22 +68,75 @@ package flexconf
 
 // RegisterResolver registers a custom-scheme resolver process-wide, so importing
 // a package for its side effect makes a scheme available by name. Registering a
-// scheme that is already registered (including a built-in: "env"/"secret"/"file")
-// PANICS — schemes are a global namespace and silent shadowing is a footgun.
+// scheme that is already registered (including a default resolver:
+// "env"/"secret"/"file") PANICS — schemes are a global namespace and silent
+// shadowing is a footgun.
 func RegisterResolver(r Resolver)
 
 // WithResolver overrides or adds a resolver for THIS Loader only (tests, or an
 // app that wants a bespoke secret/env source without touching the global set).
-// A Loader-scoped resolver shadows a global one of the same scheme.
+// A Loader-scoped resolver shadows a global one of the same scheme. It adds to /
+// overrides whatever set is already in effect (the default set, or a set fixed by
+// WithResolvers below).
 func WithResolver(r Resolver) Option
+
+// WithResolvers REPLACES this Loader's default resolver set with exactly the
+// resolvers given, instead of the env/secret/file default. It is how a Loader is
+// made progressively — or completely — static:
+//
+//   WithResolvers()               // EMPTY set: no token processing at all (§2.1)
+//   WithResolvers(myEnv, myFile)   // exactly these; no secret: resolver present
+//
+// WithResolver still composes on top of the resulting set. Use this to build a
+// Loader that must NOT carry a given scheme — most importantly the internal
+// registry loader, which cannot have a secret: resolver (§2.1).
+func WithResolvers(rs ...Resolver) Option
 ```
 
-- The built-in `env`/`secret`/`file` resolvers are installed by `New`; their
+- The default `env`/`secret`/`file` resolvers are installed by `New`; their
   behaviour is tuned by Loader options (`WithEnv`, `WithSecretPolicy`, §3–§5)
-  rather than by re-registering the scheme.
+  rather than by re-registering the scheme. `WithResolvers` is the only way to
+  install a *different* (including empty) set in their place.
 - Custom schemes are for **non-secret** composition (`$(file:...)`, a hypothetical
   `$(http:...)`); a custom scheme MUST NOT be used to smuggle secrets past the
   redaction/taint machinery — secret material only ever enters through `secret:`.
+
+### 2.1 The empty resolver set — a *static* Loader
+
+`WithResolvers()` with no arguments installs an **empty** set. Such a Loader does
+**no token processing whatever**: it reads, merges, binds, and validates literal
+YAML, and any `$(...)` occurrence in the input — a scalar scheme token *or* a
+`$(config:...)` include ([templating.md](templating.md) §7) — is a load-time error
+(`ErrUnknownScheme`, §7), because there is no handler registered for it. Include
+expansion is part of the default processing the empty set removes, so a static
+Loader neither resolves nor splices; the input is taken exactly as written.
+
+This is the mechanism the **vault registry** uses to load itself through the
+ordinary Loader pipeline ([vault-registry.md](vault-registry.md) §3,
+[config-loading.md](config-loading.md) §1). Two independent reasons force an empty
+set there:
+
+- **A `secret:` resolver would be circular.** The `secret:` resolver resolves
+  against the registry (§5.1, step 1). If the registry itself were loaded by a
+  Loader carrying `secret:`, loading the registry would depend on the registry.
+  The registry loader therefore MUST NOT carry a `secret:` resolver.
+- **The registry is normatively static** — it MUST contain no `$(...)` tokens at
+  all, not even `$(env:...)` ([vault-registry.md](vault-registry.md) §2.3). An
+  empty set enforces that directly: any token fails loud rather than resolving.
+
+So the registry is *not* a special-cased loader; it is exactly
+`(the shared pipeline) + WithResolvers()` over the environment-derived layer files
+([vault-registry.md](vault-registry.md) §3). `~`-expansion and relative-path
+resolution ([vault-registry.md](vault-registry.md) §2.3) are **not** resolver work
+— they are a post-bind normalization the registry applies to the bound
+`VaultConf`, unaffected by the empty resolver set.
+
+> **Note — replacement, not subtraction (v1).** `WithResolvers` replaces the set
+> wholesale; there is no `WithoutResolver("secret")` that keeps the other defaults
+> and drops one. The two shapes v1 supports are the full default set (from `New`,
+> optionally extended with `WithResolver`) and an explicit replacement set (most
+> commonly empty). A surgical "all defaults except secret" is niche and left to a
+> caller-assembled explicit set; a first-class subtractive option is deferred.
 
 ## 3. `env:` — environment variables
 
@@ -290,9 +346,10 @@ var (
 
 - **Resolver interface** — `Scheme()` + `Resolve(ctx, path)`, invoked on the
   merged tree; resolved values are inert (§1).
-- **Registration** — built-ins per-Loader; global `RegisterResolver` for custom
-  schemes; `WithResolver` for Loader-scoped overrides (§2).
-- **Built-in schemes** — `env` (hard-fail on missing), `file` (verbatim, relative
+- **Registration** — default resolvers per-Loader; global `RegisterResolver` for
+  custom schemes; `WithResolver` for Loader-scoped overrides; `WithResolvers` to
+  replace the default set (empty = a static Loader, §2, §2.1).
+- **Default resolvers** — `env` (hard-fail on missing), `file` (verbatim, relative
   to the containing file, non-secret), `secret` (§3–§5).
 - **`secret:` goes through the agent by default** — an internal agent-proxy
   driver; spawn+unlock like the CLI when none is running (§5.1–§5.2).

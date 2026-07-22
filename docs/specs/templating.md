@@ -178,6 +178,17 @@ Thus `config:` is resolved *before* the scalar schemes and before merge; the
 scalar schemes are resolved *after* merge. `config:` never sees a scalar token's
 output and vice versa (no interaction, no ordering ambiguity).
 
+### 7.2 Includes on a static Loader
+
+Include expansion is part of the **default** processing a Loader performs. A Loader
+whose resolver set is **empty** (`WithResolvers()`, [resolvers.md](resolvers.md)
+§2.1) is fully **static**: it performs neither scalar resolution nor `$(config:)`
+expansion, so a `$(config:…)` in its input is a load-time error rather than a
+splice — there is no handler for it. This is what keeps the **vault registry**
+literal end to end: loaded through the shared pipeline as a static Loader
+([config-loading.md](config-loading.md) §4.1), it admits *no* `$(...)` construct,
+including includes ([vault-registry.md](vault-registry.md) §2.3).
+
 ## 8. Per-scheme grammar summary
 
 Syntax here; semantics in [resolvers.md](resolvers.md).
