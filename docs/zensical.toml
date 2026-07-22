@@ -58,6 +58,7 @@ nav = [
     { "flexprompt" = "reference/flexprompt.md" },
     { "flexvault" = "reference/flexvault.md" },
     { "Vault registry" = "reference/vaults.md" },
+    { "Secret resolution" = "reference/secrets.md" },
   ] },
   { "Specs" = [
     { "Specs index" = "specs/README.md" },
