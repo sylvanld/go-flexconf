@@ -8,6 +8,7 @@ package variant
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -40,6 +41,7 @@ func Select(key, value string) Selector { return Selector{Key: key, Value: value
 type Registry[V any] struct {
 	mu            sync.RWMutex
 	discriminator string
+	familyType    reflect.Type
 	variants      map[string]func() V
 	instances     []instance[V]
 }
@@ -71,6 +73,35 @@ func NewRegistry[V any](opts ...RegistryOption) *Registry[V] {
 	return &Registry[V]{
 		discriminator: cfg.discriminator,
 		variants:      map[string]func() V{},
+		familyType:    reflect.TypeOf((*V)(nil)).Elem(),
+	}
+}
+
+// Binder is the non-generic view of a Registry that config binders use to
+// route variant locations without knowing V statically.
+type Binder interface {
+	Discriminator() string
+	FamilyType() reflect.Type
+	Variants() []string
+	NewAny(name string) (any, error)
+	AddInstance(value any, selectors map[string]string, location string) error
+	InstanceCount() int
+	TruncateInstances(n int)
+}
+
+// FamilyType returns the reflect.Type of the family interface V.
+func (r *Registry[V]) FamilyType() reflect.Type { return r.familyType }
+
+// NewAny is New with an any result, for non-generic callers (Binder).
+func (r *Registry[V]) NewAny(name string) (any, error) { return r.New(name) }
+
+// TruncateInstances drops instances registered after the first n (used to
+// roll back a failed Load without touching earlier successful registrations).
+func (r *Registry[V]) TruncateInstances(n int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if n >= 0 && n < len(r.instances) {
+		r.instances = r.instances[:n]
 	}
 }
 
@@ -122,7 +153,11 @@ func (r *Registry[V]) New(name string) (V, error) {
 // AddInstance records a configured instance with its full selector set.
 // location names the config position, for error messages. Two instances with
 // identical selector sets are rejected (ErrDuplicateVariant).
-func (r *Registry[V]) AddInstance(value V, selectors map[string]string, location string) error {
+func (r *Registry[V]) AddInstance(v any, selectors map[string]string, location string) error {
+	value, ok := v.(V)
+	if !ok {
+		return fmt.Errorf("flexconf: instance %T is not a member of family %s", v, r.familyType)
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for _, existing := range r.instances {

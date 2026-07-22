@@ -35,9 +35,10 @@ type node struct {
 	// ("!!int", "!!str", …; empty means untagged → inferred), used when binding
 	// into an untyped (any) target. secret marks a value that originated from a
 	// secret: token — it must never appear in error messages.
-	value  string
-	tag    string
-	secret bool
+	value       string
+	tag         string
+	secret      bool
+	substituted bool // value was produced by token resolution (never a literal)
 
 	// Map state: insertion-ordered keys plus the children.
 	keys     []string

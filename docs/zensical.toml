@@ -54,6 +54,7 @@ nav = [
     { "flexconf loader" = "reference/flexconf.md" },
     { "Schema & binding" = "reference/schema.md" },
     { "Templating & resolvers" = "reference/templating.md" },
+    { "Variants & registry" = "reference/variants.md" },
     { "flexprompt" = "reference/flexprompt.md" },
     { "flexvault" = "reference/flexvault.md" },
   ] },
