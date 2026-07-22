@@ -40,7 +40,7 @@ types (structs with tags). flexconf binds loaded values into an instance of
 these types. The `flexconf:"..."` struct tag mirrors the semantics of the
 standard `yaml:"..."` tag (field name, then comma-separated options); it exists
 as a format-agnostic abstraction so the same struct can back other config
-formats later without re-tagging. Details: _schema-and-binding.md_.
+formats later without re-tagging. Details: [schema-and-binding.md](schema-and-binding.md).
 
 ```go
 type Config struct {

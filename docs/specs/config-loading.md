@@ -13,7 +13,7 @@ tags:
   file is **merged** across layers, and the **load lifecycle** (read → merge →
   resolve → bind → validate). The token grammar and resolution live in
   [templating.md](templating.md) and [resolvers.md](resolvers.md); struct binding, defaults, `required`, and
-  validation rules live in _schema-and-binding.md_. Secret backends are in
+  validation rules live in [schema-and-binding.md](schema-and-binding.md). Secret backends are in
   [vault-drivers.md](vault-drivers.md) and [vault-registry.md](vault-registry.md).
 
 ## 1. Model: config directories as layers
@@ -106,7 +106,7 @@ Merging is over the parsed value tree of the *same* file across layers:
   merge therefore never has to arbitrate a scalar↔map↔sequence conflict. (A
   **polymorphic** field — one whose concrete shape is chosen dynamically, e.g. a
   discriminated union — is the deliberate exception: differing shapes are
-  legitimate there and the higher layer replaces; see _schema-and-binding.md_.)
+  legitimate there and the higher layer replaces; see [schema-and-binding.md](schema-and-binding.md).)
 
 ## 4. The Loader
 
@@ -134,7 +134,7 @@ func (l *Loader) Load(name string, dst any) error
 - `Load` MUST NOT mutate `dst` on failure beyond what a partial decode may have
   written before the error — callers SHOULD treat `dst` as undefined when `Load`
   returns non-nil. (Whether binding is all-or-nothing is finalized in
-  _schema-and-binding.md_.)
+  [schema-and-binding.md](schema-and-binding.md).)
 
 ## 5. Load lifecycle
 
@@ -168,9 +168,9 @@ func (l *Loader) Load(name string, dst any) error
    field **fails loud** with an error naming the **field, key path, and offending
    value** — **except** that a value originating from a `secret:` token is
    **redacted** in the message (the field/key path is still named). Details:
-   _schema-and-binding.md_.
+   [schema-and-binding.md](schema-and-binding.md).
 5. **Validate** — enforce `required` (on the merged tree), types, and any custom
-   rules; report the first (or all) violations. Details: _schema-and-binding.md_.
+   rules; report the first (or all) violations. Details: [schema-and-binding.md](schema-and-binding.md).
 
 Each step fails loud and early: an unparseable file, a per-file shape violation,
 an unresolvable token, a type mismatch, or a failed validation stops the load

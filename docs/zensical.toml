@@ -53,6 +53,7 @@ nav = [
     { "Specs index" = "specs/README.md" },
     { "Architecture overview" = "specs/overview.md" },
     { "Configuration loading" = "specs/config-loading.md" },
+    { "Schema & binding" = "specs/schema-and-binding.md" },
     { "Templating" = "specs/templating.md" },
     { "Resolvers" = "specs/resolvers.md" },
     { "Variants & registry" = "specs/variants.md" },
