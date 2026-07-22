@@ -34,7 +34,7 @@ Conventions applied to every PR:
 | 9 | `feat/vault-registry` | Vault registry: env-derived layer list (`FLEXCONF_VAULTS` / well-known file), static-loader front-end, whole-entry replacement, `default:` vault, `~`/relative path normalization, `VaultID` derivation ([vault-registry.md](specs/vault-registry.md)). Reference page `docs/reference/vaults.md`. | ✅ |
 | 10 | `feat/agent-runtime` | `internal/agent`: socket protocol (length-prefixed JSON), server loop with idle auto-lock, client `Dial`, self-exec spawn + `RunAgentIfRequested`, lock/PID/err files, peer-UID check, agent-proxy `VaultDriver` ([cli.md](specs/cli.md) §6, [resolvers.md](specs/resolvers.md) §5.2, §5.5). | ✅ |
 | 11 | `feat/secret-resolver` | `secret:` resolver: `[vault:]namespace/key` parsing, registry lookup, `PolicyAgent` (via agent proxy) and `PolicyInProcess`, `WithSecretPolicy`, `flexconf.RunAgentIfRequested` re-export, secret-origin redaction in errors ([resolvers.md](specs/resolvers.md) §5, [errors.md](specs/errors.md)). Reference page `docs/reference/secrets.md`. | ✅ |
-| 12 | `feat/flexcli` | `flexcli` Cobra `secret` group (`init`/`unlock`/`lock`/`get`/`set`/`list`/`vaults`, `--vault` root flag, auto-unlock, exit codes) + `cmd/flexconf` standalone binary ([cli.md](specs/cli.md)). Reference page `docs/reference/cli.md`. | ⬜ |
+| 12 | `feat/flexcli` | `flexcli` Cobra `secret` group (`init`/`unlock`/`lock`/`get`/`set`/`list`/`vaults`, `--vault` root flag, auto-unlock, exit codes) + `cmd/flexconf` standalone binary ([cli.md](specs/cli.md)). Reference page `docs/reference/cli.md`. | ✅ |
 | 13 | `docs/reference-polish` | Docs polish: reference index page, nav registration for all reference pages, README quick-start refresh. | ⬜ |
 
 ## Sequencing notes
