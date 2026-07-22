@@ -114,6 +114,36 @@ flexvault.MapDecoder(map[string]any{"path": "a.kdbx"}) // strict: unknown keys e
 flexvault.EnvDecoder("FLEXCONF_")                       // path ← FLEXCONF_PATH, …
 ```
 
+## KeePass driver
+
+Package `flexvault/driver/keepass`, registered as `"keepass"`. Import it for
+its side effect:
+
+```go
+import _ "github.com/sylvanld/go-flexconf/flexvault/driver/keepass"
+```
+
+Config keys:
+
+| Key | Meaning |
+|-----|---------|
+| `path` | Path to the `.kdbx` file (**required**). |
+| `keyfile` | Optional key-file path; when set, the master password becomes optional. |
+| `readonly` | Optional, defaults to `false`; a readonly vault rejects `Set` with `ErrReadOnly`. |
+
+Model mapping: a **top-level group** is a namespace, an **entry** in it is a
+key, and the entry's **Password** field is the secret value. Entry titles
+should be unique within a group and free of `/` (documented convention; the
+first title match wins).
+
+- `Credentials()` declares one request, `keepass.CredPassword`, marked
+  optional when a keyfile is configured.
+- Writes persist atomically (temp file + rename). `Set` auto-creates a
+  missing group.
+- The driver implements `Initializer`: `secret init` / `Manager.Create`
+  creates a fresh KDBX v4 file (double-entry master password) and never
+  overwrites an existing one.
+
 ## Errors
 
 ```go
