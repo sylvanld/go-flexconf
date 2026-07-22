@@ -50,6 +50,9 @@ Copyright &copy; 2026 Sylvan Le Deunff
 nav = [
   { "Get started" = "index.md" },
   { "Roadmap" = "roadmap.md" },
+  { "Reference" = [
+    { "flexprompt" = "reference/flexprompt.md" },
+  ] },
   { "Specs" = [
     { "Specs index" = "specs/README.md" },
     { "Architecture overview" = "specs/overview.md" },

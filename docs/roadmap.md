@@ -24,7 +24,7 @@ Conventions applied to every PR:
 | # | Branch | Feature | Status |
 |---|--------|---------|--------|
 | 1 | `docs/implementation-roadmap` | This roadmap. | ✅ |
-| 2 | `feat/flexprompt` | `flexprompt` leaf package: `Prompter`, `PromptRequest`, process-wide singleton (`SetPrompter`/`GetPrompter`), `NewCLIPrompter`/`NewMapPrompter`/`NewEnvPrompter`/`PrompterFunc`, sentinel errors ([prompter.md](specs/prompter.md)). Reference page `docs/reference/flexprompt.md`. | ⬜ |
+| 2 | `feat/flexprompt` | `flexprompt` leaf package: `Prompter`, `PromptRequest`, process-wide singleton (`SetPrompter`/`GetPrompter`), `NewCLIPrompter`/`NewMapPrompter`/`NewEnvPrompter`/`PrompterFunc`, sentinel errors ([prompter.md](specs/prompter.md)). Reference page `docs/reference/flexprompt.md`. | ✅ |
 | 3 | `feat/flexvault-core` | `flexvault` core: `VaultDriver` + `Initializer` interfaces, `Capabilities`, sentinel errors, `Manager` (lifecycle enforcement, dispatch, retry, address validation, serialization), driver registration (`Register`/`New`), `MapDecoder`/`EnvDecoder` ([vault-drivers.md](specs/vault-drivers.md) §1–§9). Reference page `docs/reference/flexvault.md`. | ⬜ |
 | 4 | `feat/keepass-driver` | `flexvault/driver/keepass`: KeePass driver over gokeepasslib — Configure/Credentials/Unlock/Get/Set/List/Lock, `Initializer`, group/entry ↔ namespace/key mapping ([vault-drivers.md](specs/vault-drivers.md) §10). Reference page section. | ⬜ |
 | 5 | `feat/variant-engine` | `internal/variant`: generic `Registry[V]` — variant registration, discriminator, selectors, subset matching, exactly-one resolution, duplicate detection ([variants.md](specs/variants.md) §2–§7). Internal; public re-export lands with PR 8. | ⬜ |
