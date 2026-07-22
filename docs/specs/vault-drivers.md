@@ -596,6 +596,11 @@ Out of scope here; noted so the interface doesn't preclude them:
 - The manager is the intended home for an optional read-through cache with TTL.
 - Rotating/dynamic secrets may need a lazy/refresh model rather than eager
   `Get`; ties into the eager-vs-lazy question in [overview.md](overview.md) §7.
+- **Agent cache coherence** — an unlocked agent serves reads from its in-memory
+  snapshot, so a value changed out-of-band (external rotation, a direct file edit,
+  a `set` not routed through this agent) can be stale; v1 offers no cross-process
+  invalidation. Detailed in [resolvers.md](resolvers.md) §9 and resolved together
+  with the cache/TTL work here.
 
 ## 12. Resolved decisions & deferred items
 
@@ -637,9 +642,11 @@ Out of scope here; noted so the interface doesn't preclude them:
 - **Multiple vaults** — *resolved* in [vault-registry.md](vault-registry.md): vaults are named
   in a registry and a token selects one via a `vault:` segment
   (`$(secret:vault:namespace/key)`), defaulting to the registry's default
-  vault. The resolver-side wiring remains in _resolvers.md_.
+  vault. The resolver-side wiring is *resolved* in [resolvers.md](resolvers.md) §5.
 - **Caching & rotation** — §11.
-- **Resolver integration** — how the `secret:` scheme selects and drives the
-  active manager (_resolvers.md_, _templating.md_).
+- **Resolver integration** — *resolved* in [resolvers.md](resolvers.md): the
+  `secret:` resolver builds one `Manager` per referenced vault, reaching each
+  through the background agent (an internal proxy driver), spawning+unlocking one
+  like the CLI when none is running (§5.1–§5.2 there).
 - **Credential zeroing** — possible future move of secret material to `[]byte`
   (§7); ergonomic `string` chosen for v1.

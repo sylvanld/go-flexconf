@@ -37,8 +37,11 @@ dependencies point one way (no cycles). Listed bottom-up (leaf first):
   ([prompter.md](prompter.md)). Leaf package; imports none of the others.
 - **`flexvault`** — secret backends: `VaultDriver`, `Manager`, drivers (KeePass, …).
 - **`flexconf`** — config loading (schema, sources, templating, resolvers, loader).
-- **`flexcli`** *(optional)* — a mountable Cobra `secret` command group and the
-  background secret agent (ssh-agent style) that holds an unlocked vault.
+- **`internal/agent`** *(internal)* — the ssh-agent-style secret agent runtime
+  that holds an unlocked vault in memory; shared by `flexconf` (the `secret:`
+  resolver) and `flexcli` ([resolvers.md](resolvers.md) §5.5).
+- **`flexcli`** *(optional)* — a mountable Cobra `secret` command group that drives
+  the `internal/agent` runtime.
 
 See [overview.md](overview.md) "Module layout" for the normative description.
 
@@ -54,7 +57,7 @@ See [overview.md](overview.md) "Module layout" for the normative description.
 | [vault-drivers.md](vault-drivers.md) | ✅&nbsp;Accepted | The `VaultDriver` interface, the `Manager` (unlock/get/set/list) and its dispatch to the `Prompter`, `namespace/key` addressing, and the KeePass driver. |
 | [vault-registry.md](vault-registry.md) | 📝&nbsp;Draft | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |
 | [cli.md](cli.md) | 📝&nbsp;Draft | The `flexcli` Cobra `secret` command group (incl. `secret vaults` registry inspection) and the background secret agent (ssh-agent style) with idle auto-lock. |
-| _resolvers.md_ | 🚧&nbsp;TODO | Built-in resolvers (`env`, `secret`, `file`, …) and how to register custom schemes. |
+| [resolvers.md](resolvers.md) | 📝&nbsp;Draft | The `Resolver` interface and registration, built-in schemes (`env`, `secret`, `file`), and how the `secret:` scheme reaches a vault through the background agent (spawning one like the CLI when none is running). |
 | _api.md_ | 🚧&nbsp;TODO | Public Go API surface of the SDK. |
 | _errors.md_ | 🚧&nbsp;TODO | Error taxonomy, wrapping, and diagnostics. |
 

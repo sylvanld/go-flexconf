@@ -35,11 +35,18 @@ process** that holds the *unlocked* vault in memory and serves subsequent
 standalone binary lives at `cmd/flexconf`:
 
 ```
-cmd/flexconf → flexcli → flexvault → flexprompt   (+ flexcli → github.com/spf13/cobra)
+cmd/flexconf → flexcli → internal/agent → flexvault → flexprompt   (+ flexcli → github.com/spf13/cobra)
 ```
 
 - `flexcli` imports `flexvault` (Manager, registration, decoders, `Initializer`),
-  `flexprompt` (the CLI prompter), and Cobra. Nothing imports `flexcli`.
+  `flexprompt` (the CLI prompter), `internal/agent` (the agent runtime it drives),
+  and Cobra. Nothing imports `flexcli`.
+- **The agent runtime itself lives in `internal/agent`, not `flexcli`.** `flexcli`
+  owns only the Cobra command group and drives that shared runtime; `flexconf`'s
+  `secret:` resolver drives the *same* `internal/agent` package
+  ([resolvers.md](resolvers.md) §5.5). This is why §6 below describes agent
+  *behaviour* while the code is internal and reused by both. (Earlier drafts placed
+  the agent in `flexcli`; that is superseded.)
 - It is **optional**: an app that only needs programmatic secret access uses
   `flexvault` directly and never pulls in Cobra.
 - `cmd/flexconf` is a thin `main` that wires `flexcli` to the global config (§5).
@@ -585,7 +592,8 @@ uses the same running agent if present, or unlocks per the loader's policy.
 - **Non-Unix transports** — v1 targets Unix domain sockets; Windows named pipes
   (or AF_UNIX on modern Windows) are deferred.
 - **Shell completion, man pages** — standard Cobra features, not specified here.
-- **Resolver ↔ agent integration** — how the `secret:` resolver discovers and
-  reuses a running agent during a normal `Load` is deferred to _resolvers.md_.
+- **Resolver ↔ agent integration** — *resolved* in [resolvers.md](resolvers.md)
+  §5: the `secret:` resolver reaches the running agent (or spawns+unlocks one like
+  §4.1 here) through the shared `internal/agent` runtime.
 - **Vault deletion / rekey** — not in v1 (`init` never clobbers).
 - **Multi-vault-in-one-command UX** — see §7 and vault-drivers §12.

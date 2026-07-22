@@ -158,15 +158,19 @@ an optional CLI package. The split follows the dependency direction —
 |---------|------|---------|
 | **`flexprompt`** | Credential/​input collection: the `Prompter` interface, `PromptRequest`, the process-wide singleton (`SetPrompter`/`GetPrompter`), built-in prompters (`NewCLIPrompter`, `NewMapPrompter`, `NewEnvPrompter`), and prompt errors. The module's **leaf** package. | (stdlib only) |
 | **`flexvault`** | Secret backends and their lifecycle: the `VaultDriver` interface, the `Manager` (unlock/get/set/list), `Capabilities`, the sentinel errors, driver registration (`Register`/`New`), the config decoders (`MapDecoder`/`EnvDecoder`), and concrete drivers under `flexvault/driver/*` (e.g. `flexvault/driver/keepass`). | `flexprompt` |
-| **`flexconf`** | Config loading: schema declaration and binding, config directories and layering, the templating engine, resolvers (`env`, `secret`, …), and the top-level `Loader`. The `secret:` resolver drives a `flexvault.Manager`. | `flexvault`, `flexprompt` |
-| **`flexcli`** *(optional)* | A mountable Cobra `secret` command group (`init`/`unlock`/`lock`/`get`/`set`/`list`) and the background **secret agent** that holds an unlocked vault in memory with an idle auto-lock. Mounted **embedded** in an app's CLI or via the shipped **`cmd/flexconf`** binary; both read vault definitions from the vault registry ([vault-registry.md](vault-registry.md)). Not needed for programmatic use. | `flexvault`, `flexprompt`, Cobra |
+| **`flexconf`** | Config loading: schema declaration and binding, config directories and layering, the templating engine, resolvers (`env`, `secret`, `file`), and the top-level `Loader`. The `secret:` resolver reaches vaults through the background agent (an internal proxy over `internal/agent`), driving a `flexvault.Manager` ([resolvers.md](resolvers.md) §5). Re-exports `RunAgentIfRequested`. | `flexvault`, `flexprompt`, `internal/agent` |
+| **`internal/agent`** *(internal)* | The **secret agent runtime**: the socket protocol, client (`Dial`), server loop (`Serve`), self-exec spawning (`RunAgentIfRequested`), `VaultID` derivation, socket/PID/lock-file handling, idle auto-lock, and the internal agent-proxy `VaultDriver`. Holds one unlocked vault in memory (ssh-agent style). Not part of the public API; shared by `flexconf` and `flexcli` ([resolvers.md](resolvers.md) §5.5). | `flexvault`, `flexprompt` |
+| **`flexcli`** *(optional)* | A mountable Cobra `secret` command group (`init`/`unlock`/`lock`/`get`/`set`/`list`) that **drives** the `internal/agent` runtime. Mounted **embedded** in an app's CLI or via the shipped **`cmd/flexconf`** binary; both read vault definitions from the vault registry ([vault-registry.md](vault-registry.md)). Not needed for programmatic use. | `flexvault`, `flexprompt`, `internal/agent`, Cobra |
 
 Rules:
 
-- **Dependencies point downward only:** `cmd/flexconf → flexcli → flexvault →
-  flexprompt` (and `flexcli → flexvault` directly). `flexprompt` MUST NOT import
-  the others; `flexvault` MUST NOT import `flexconf` or `flexcli`; nothing imports
-  `flexcli`.
+- **Dependencies point downward only:** `cmd/flexconf → flexcli → internal/agent
+  → flexvault → flexprompt`, and `flexconf → internal/agent` (for the `secret:`
+  resolver). `flexprompt` MUST NOT import the others; `flexvault` MUST NOT import
+  `flexconf`, `flexcli`, or `internal/agent`; `internal/agent` MUST NOT import
+  `flexconf` or `flexcli`; nothing imports `flexcli`. The agent runtime is a
+  **module-internal** package so neither `flexconf` nor `flexcli` needs to import
+  the other to share it ([resolvers.md](resolvers.md) §5.5).
 - An application using only secret management (no config loading) can depend on
   `flexvault` (+ `flexprompt`) alone, without pulling in the config loader or
   Cobra.
