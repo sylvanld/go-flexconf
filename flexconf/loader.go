@@ -10,6 +10,7 @@ package flexconf
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,7 +25,13 @@ type Loader struct {
 }
 
 // loaderOptions collects the tunable Loader behaviour; populated by Options.
-type loaderOptions struct{}
+type loaderOptions struct {
+	scoped   map[string]Resolver         // WithResolver overrides
+	set      map[string]Resolver         // WithResolvers replacement set
+	replaced bool                        // WithResolvers was called
+	env      func(string) (string, bool) // WithEnv source for env:
+	fsys     fs.FS                       // WithFS source for file:/config:
+}
 
 // Option tunes a Loader (see With).
 type Option func(*loaderOptions)
@@ -133,14 +140,19 @@ func (l *Loader) readLayers(name string) ([]*node, error) {
 		if tree.kind != kindMap {
 			return nil, fmt.Errorf("flexconf: %s: top-level config must be a map, found a %s", path, tree.kind)
 		}
+		// Expand $(config:…) includes per layer, before merge. A static
+		// Loader (empty resolver set) performs no include expansion; its
+		// tokens fail later, at the resolve step.
+		if !l.opts.static() {
+			tree, err = l.expandIncludes(tree, dir, []string{filepath.Join(dir, name)})
+			if err != nil {
+				return nil, fmt.Errorf("flexconf: %w", err)
+			}
+			if tree.kind != kindMap {
+				return nil, fmt.Errorf("flexconf: %s: top-level config must be a map, found a %s", path, tree.kind)
+			}
+		}
 		layers = append(layers, tree)
 	}
 	return layers, nil
-}
-
-// resolveTree expands $(scheme:path) tokens on the merged tree. Token
-// resolution lands with the templating feature; until then trees pass
-// through unchanged.
-func (l *Loader) resolveTree(tree *node) error {
-	return nil
 }
