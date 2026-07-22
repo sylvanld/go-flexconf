@@ -61,6 +61,8 @@ nav = [
     { "Vault drivers & manager" = "specs/vault-drivers.md" },
     { "Vault registry & references" = "specs/vault-registry.md" },
     { "CLI & secret agent" = "specs/cli.md" },
+    { "Public API surface" = "specs/api.md" },
+    { "Errors" = "specs/errors.md" },
     { "Candidate features" = "specs/missing.md" },
   ] },
 ]

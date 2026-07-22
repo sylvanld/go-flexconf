@@ -56,18 +56,20 @@ See [overview.md](overview.md) "Module layout" for the normative description.
 
 | Spec | Status | Summary |
 |------|--------|---------|
-| [overview.md](overview.md) | 📝&nbsp;Draft | Architecture, core concepts, glossary, and how the pieces fit together. |
-| [config-loading.md](config-loading.md) | 📝&nbsp;Draft | Config directories as layers, the `Loader` and `Load(name, &struct)`, merge precedence, formats, and the load lifecycle. |
-| [schema-and-binding.md](schema-and-binding.md) | 📝&nbsp;Draft | How apps declare config structure (the `flexconf` tag), how defaults (pre-populated instance) and values bind to Go types, strict validation, and the `Validate()` hook. |
-| [variants.md](variants.md) | 📝&nbsp;Draft | Polymorphic config: choosing a concrete variant by a discriminator key, the `Registry[V]` that binds and holds every instance, selectors, and selector-based resolution (exactly-one-or-fail). |
-| [templating.md](templating.md) | 📝&nbsp;Draft | Token grammar (`$(scheme:path)`), the node-tree substitution model, escaping (`$$(`), no-nesting rule, resolved-scalar typing, and the `$(config:path)` include/splice token. |
+| [overview.md](overview.md) | ✅&nbsp;Accepted | Architecture, core concepts, glossary, and how the pieces fit together. |
+| [config-loading.md](config-loading.md) | ✅&nbsp;Accepted | Config directories as layers, the `Loader` and `Load(name, &struct)`, merge precedence, formats, and the load lifecycle. |
+| [schema-and-binding.md](schema-and-binding.md) | ✅&nbsp;Accepted | How apps declare config structure (the `flexconf` tag), how defaults (pre-populated instance) and values bind to Go types, strict validation, and the `Validate()` hook. |
+| [variants.md](variants.md) | ✅&nbsp;Accepted | Polymorphic config: choosing a concrete variant by a discriminator key, the `Registry[V]` that binds and holds every instance, selectors, and selector-based resolution (exactly-one-or-fail). |
+| [templating.md](templating.md) | ✅&nbsp;Accepted | Token grammar (`$(scheme:path)`), the node-tree substitution model, escaping (`$$(`), no-nesting rule, resolved-scalar typing, and the `$(config:path)` include/splice token. |
 | [prompter.md](prompter.md) | ✅&nbsp;Accepted | The `flexprompt` package: the `Prompter` interface, `PromptRequest`, the process-wide singleton, built-in prompters, and prompter errors. |
 | [vault-drivers.md](vault-drivers.md) | ✅&nbsp;Accepted | The `VaultDriver` interface, the `Manager` (unlock/get/set/list) and its dispatch to the `Prompter`, `namespace/key` addressing, and the KeePass driver. |
-| [vault-registry.md](vault-registry.md) | 📝&nbsp;Draft | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |
-| [cli.md](cli.md) | 📝&nbsp;Draft | The `flexcli` Cobra `secret` command group (incl. `secret vaults` registry inspection) and the background secret agent (ssh-agent style) with idle auto-lock. |
-| [resolvers.md](resolvers.md) | 📝&nbsp;Draft | The `Resolver` interface and registration, built-in schemes (`env`, `secret`, `file`), and how the `secret:` scheme reaches a vault through the background agent (spawning one like the CLI when none is running). |
-| _api.md_ | 🚧&nbsp;TODO | Public Go API surface of the SDK. |
-| _errors.md_ | 🚧&nbsp;TODO | Error taxonomy, wrapping, and diagnostics. |
+| [vault-registry.md](vault-registry.md) | ✅&nbsp;Accepted | The named vault registry, layering, the default vault, and vault references in tokens (`$(secret:[vault:]namespace/key)`). |
+| [cli.md](cli.md) | ✅&nbsp;Accepted | The `flexcli` Cobra `secret` command group (incl. `secret vaults` registry inspection) and the background secret agent (ssh-agent style) with idle auto-lock. |
+| [resolvers.md](resolvers.md) | ✅&nbsp;Accepted | The `Resolver` interface and registration, built-in schemes (`env`, `secret`, `file`), and how the `secret:` scheme reaches a vault through the background agent (spawning one like the CLI when none is running). |
+| [api.md](api.md) | ✅&nbsp;Accepted | Public Go API surface of the SDK, gathered per package (semantics owned by the topic specs). |
+| [errors.md](errors.md) | ✅&nbsp;Accepted | Error taxonomy, wrapping, secret-origin redaction, and the `errors.Is` contract. |
+| [missing.md](missing.md) | 🗒️&nbsp;Notes | Non-normative gap analysis: what landed in the specs and the post-v1 candidate list. |
 
-> Rows in _italics_ are planned but not yet written. When you add a spec, create
-> the file and update this table.
+> All v1 specs are accepted. [missing.md](missing.md) is non-normative notes.
+> When you add a spec, create the file, update this table, and register it in the
+> Zensical nav (`docs/zensical.toml`).
