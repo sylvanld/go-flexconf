@@ -4,170 +4,138 @@ icon: lucide/rocket
 
 # Get started
 
-For full documentation visit [zensical.org](https://zensical.org/docs/).
+**flexconf** is a Go SDK for flexible **configuration** and **secret**
+management. Your application declares its configuration as Go types; flexconf
+loads it from one or more config directories, resolving templating tokens such
+as `$(env:FOO)` or `$(secret:artifactory/token)` along the way. The person
+authoring the config — not the application — decides which values come from the
+environment or from a secret backend.
 
-## Commands
+This page walks through a minimal setup in four steps. The
+[reference](reference/README.md) covers every topic in depth; the
+[specs](specs/README.md) are the normative source of truth.
 
-* [`zensical new`][new] - Create a new project
-* [`zensical serve`][serve] - Start local web server
-* [`zensical build`][build] - Build your site
+## 1. Install
 
-  [new]: https://zensical.org/docs/usage/new/
-  [serve]: https://zensical.org/docs/usage/preview/
-  [build]: https://zensical.org/docs/usage/build/
-
-## Examples
-
-### Admonitions
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/)
-
-!!! note
-
-    This is a **note** admonition. Use it to provide helpful information.
-
-!!! warning
-
-    This is a **warning** admonition. Be careful!
-
-### Details
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/#collapsible-blocks)
-
-??? info "Click to expand for more info"
-
-    This content is hidden until you click to expand it.
-    Great for FAQs or long explanations.
-
-## Code Blocks
-
-> Go to [documentation](https://zensical.org/docs/authoring/code-blocks/)
-
-``` python hl_lines="2" title="Code blocks"
-def greet(name):
-    print(f"Hello, {name}!") # (1)!
-
-greet("Python")
+```console
+$ go get github.com/sylvanld/go-flexconf
 ```
 
-1.  > Go to [documentation](https://zensical.org/docs/authoring/code-blocks/#code-annotations)
+To manage vaults from the command line, also install the standalone binary:
 
-    Code annotations allow to attach notes to lines of code.
-
-Code can also be highlighted inline: `#!python print("Hello, Python!")`.
-
-## Content tabs
-
-> Go to [documentation](https://zensical.org/docs/authoring/content-tabs/)
-
-=== "Python"
-
-    ``` python
-    print("Hello from Python!")
-    ```
-
-=== "Rust"
-
-    ``` rs
-    println!("Hello from Rust!");
-    ```
-
-## Diagrams
-
-> Go to [documentation](https://zensical.org/docs/authoring/diagrams/)
-
-``` mermaid
-graph LR
-  A[Start] --> B{Error?};
-  B -->|Yes| C[Hmm...];
-  C --> D[Debug];
-  D --> B;
-  B ---->|No| E[Yay!];
+```console
+$ go install github.com/sylvanld/go-flexconf/cmd/flexconf@latest
 ```
 
-## Footnotes
+## 2. Declare your configuration
 
-> Go to [documentation](https://zensical.org/docs/authoring/footnotes/)
+Configuration is a plain Go struct with `flexconf` tags. Defaults live in Go —
+pre-populate the struct before loading:
 
-Here's a sentence with a footnote.[^1]
+```go
+package main
 
-Hover it, to see a tooltip.
+import (
+    "log"
+    "time"
 
-[^1]: This is the footnote.
+    "github.com/sylvanld/go-flexconf/flexconf"
+    "github.com/sylvanld/go-flexconf/flexprompt"
+    _ "github.com/sylvanld/go-flexconf/flexvault/driver/keepass" // secret backend
+)
 
+type Config struct {
+    Service string        `flexconf:"service,required"`
+    Timeout time.Duration `flexconf:"timeout"`
+    Token   string        `flexconf:"token"` // may be $(secret:…) — the type doesn't care
+}
 
-## Formatting
+func main() {
+    flexconf.RunAgentIfRequested()                    // MUST be first in main: enables agent-backed secrets
+    flexprompt.SetPrompter(flexprompt.NewCLIPrompter())
 
-> Go to [documentation](https://zensical.org/docs/authoring/formatting/)
-
-- ==This was marked (highlight)==
-- ^^This was inserted (underline)^^
-- ~~This was deleted (strikethrough)~~
-- H~2~O
-- A^T^A
-- ++ctrl+alt+del++
-
-## Icons, Emojis
-
-> Go to [documentation](https://zensical.org/docs/authoring/icons-emojis/)
-
-* :sparkles: `:sparkles:`
-* :rocket: `:rocket:`
-* :tada: `:tada:`
-* :memo: `:memo:`
-* :eyes: `:eyes:`
-
-## Maths
-
-> Go to [documentation](https://zensical.org/docs/authoring/math/)
-
-$$
-\cos x=\sum_{k=0}^{\infty}\frac{(-1)^k}{(2k)!}x^{2k}
-$$
-
-!!! warning "Needs configuration"
-    Note that MathJax is included via a `script` tag on this page and is not
-    configured in the generated default configuration to avoid including it
-    in a pages that do not need it. See the documentation for details on how
-    to configure it on all your pages if they are more Maths-heavy than these
-    simple starter pages.
-
-<script id="MathJax-script" src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
-<script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [["\\(", "\\)"]],
-      displayMath: [["\\[", "\\]"]],
-      processEscapes: true,
-      processEnvironments: true
-    },
-    options: {
-      ignoreHtmlClass: ".*|",
-      processHtmlClass: "arithmatex"
+    cfg := Config{Timeout: 30 * time.Second}          // defaults live in Go
+    if err := flexconf.New("/etc/myapp", "./config").Load("config.yaml", &cfg); err != nil {
+        log.Fatal(err)
     }
-  };
 
-  document$.subscribe(() => {
-    MathJax.startup.output.clearCache()
-    MathJax.typesetClear()
-    MathJax.texReset()
-    MathJax.typesetPromise()
-  })
-</script>
+    log.Printf("service=%s timeout=%s", cfg.Service, cfg.Timeout)
+}
+```
 
-## Task Lists
+`flexconf.New` takes **config directories as layers**, ordered lowest → highest
+precedence: maps deep-merge by key, scalars and sequences are replaced
+wholesale. Binding is all-or-nothing — on any error your struct is left exactly
+as passed. See [flexconf loader](reference/flexconf.md) and
+[schema & binding](reference/schema.md).
 
-> Go to [documentation](https://zensical.org/docs/authoring/lists/#using-task-lists)
+## 3. Write the config file
 
-* [x] Install Zensical
-* [x] Configure `zensical.toml`
-* [x] Write amazing documentation
-* [ ] Deploy anywhere
+```yaml
+# ./config/config.yaml
+service: api
+timeout: 10s
+token: $(secret:artifactory/token)   # resolved via the operator's vault registry
+url: https://$(env:HOST)/api         # tokens can be embedded in literal text
+```
 
-## Tooltips
+Values may contain `$(scheme:path)` tokens, resolved at load time:
 
-> Go to [documentation](https://zensical.org/docs/authoring/tooltips/)
+| Token                     | Resolves to                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| `$(env:NAME)`             | Environment variable (missing is a hard error).              |
+| `$(file:path)`            | Verbatim file contents, relative to the config file.         |
+| `$(config:other.yaml)`    | Structural include: splices another YAML tree in place.      |
+| `$(secret:namespace/key)` | Secret from the default vault (or `$(secret:vault:ns/key)`). |
 
-[Hover me][example]
+See [templating & resolvers](reference/templating.md) for the full grammar,
+escaping, and custom resolvers.
 
-  [example]: https://example.com "I'm a tooltip!"
+## 4. Set up secrets
+
+Secrets never live in config files — `$(secret:…)` tokens are looked up in a
+**vault registry** owned by the operator:
+
+```yaml
+# ~/.config/flexconf/vaults.yaml
+default: personal
+vaults:
+  personal:
+    driver: keepass
+    path: ~/.local/share/flexconf/personal.kdbx
+```
+
+Create, unlock, and populate the vault with the CLI:
+
+```console
+$ flexconf secret init
+New KeePass master password: ****
+created vault "personal"
+
+$ flexconf secret unlock
+KeePass master password: ****
+unlocked; agent will lock after idle timeout
+
+$ echo -n 'tok' | flexconf secret set artifactory/token
+ok
+```
+
+`unlock` spawns a detached, ssh-agent-style background agent that holds the
+unlocked vault in memory and auto-locks after an idle timeout (default 2
+minutes). Your application then resolves `$(secret:…)` tokens through the
+agent without ever prompting — or, when no agent is running, prompts via the
+`flexprompt` prompter you configured in step 2.
+
+See the [vault registry](reference/vaults.md),
+[secret resolution](reference/secrets.md), and the [CLI](reference/cli.md) —
+including how to mount the same `secret` command group into your own app's CLI
+with `flexcli`.
+
+## Where to go next
+
+- [Reference index](reference/README.md) — one practical page per package or
+  topic.
+- [Variants & registry](reference/variants.md) — polymorphic config with
+  discriminators.
+- [Specs](specs/README.md) — the normative behaviour, spec-first.
+- [Roadmap](roadmap.md) — the delivery plan.
