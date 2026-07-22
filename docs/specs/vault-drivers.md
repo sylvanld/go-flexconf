@@ -517,7 +517,7 @@ selection in mind.
 
 ## 10. KeePass driver — first implementation
 
-Package (proposed): `github.com/<org>/flexconf/flexvault/driver/keepass`,
+Package: `github.com/sylvanld/go-flexconf/flexvault/driver/keepass`,
 registered as `"keepass"`.
 
 ```go

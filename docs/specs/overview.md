@@ -150,7 +150,7 @@ Normative rules live in _vault-drivers.md_.
 
 ## 6. Module layout
 
-The module (`go.mod` root TBD) is organized around **three core packages** plus
+The module (`go.mod` root `github.com/sylvanld/go-flexconf`) is organized around **three core packages** plus
 an optional CLI package. The split follows the dependency direction —
 `flexprompt` at the bottom — so there are no import cycles.
 

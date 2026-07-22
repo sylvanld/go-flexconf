@@ -96,8 +96,9 @@ be committed.
 
 ## Conventions
 
-- Module path / import root: TBD (to be defined when `go.mod` is created). The
-  three packages above are sub-packages of that root.
+- Module path / import root: `github.com/sylvanld/go-flexconf` (defined in
+  `go.mod`). The three packages above are sub-packages of that root (e.g.
+  `github.com/sylvanld/go-flexconf/flexvault`).
 - Public API surface should be reviewed against the API spec before release.
 - Never commit real secrets, tokens, or credentials — not even in tests or spec
   examples. Use obviously fake placeholders (e.g. `artifactory/token`).
