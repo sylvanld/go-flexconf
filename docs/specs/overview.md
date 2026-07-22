@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - configuration
+  - secrets
+---
+
 # Overview
 
 - **Status:** 📝 Draft

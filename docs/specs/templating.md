@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - templating
+  - configuration
+---
+
 # Templating
 
 - **Status:** 📝 Draft

@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - templating
+  - secrets
+---
+
 # Resolvers
 
 - **Status:** 📝 Draft

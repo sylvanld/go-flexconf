@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - configuration
+  - secrets
+---
+
 # flexconf — Specifications
 
 **flexconf** is a Go SDK for flexible **configuration** and **secret**

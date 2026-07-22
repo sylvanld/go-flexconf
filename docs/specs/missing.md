@@ -1,3 +1,8 @@
+---
+tags:
+  - specs
+---
+
 # Missing / Candidate Features
 
 - **Status:** 🗒️ Notes (non-normative)

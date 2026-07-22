@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - vault
+  - secrets
+---
+
 # Vault Drivers & Manager
 
 - **Status:** ✅ Accepted

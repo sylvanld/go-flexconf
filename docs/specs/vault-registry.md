@@ -1,3 +1,11 @@
+---
+tags:
+  - specs
+  - vault
+  - secrets
+  - configuration
+---
+
 # Vault Registry & Vault References
 
 - **Status:** 📝 Draft

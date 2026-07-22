@@ -1,3 +1,9 @@
+---
+tags:
+  - specs
+  - variants
+---
+
 # Variants & Registry
 
 - **Status:** 📝 Draft

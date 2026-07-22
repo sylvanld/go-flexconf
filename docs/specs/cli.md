@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - cli
+  - secrets
+---
+
 # CLI & Secret Agent (`flexcli`)
 
 - **Status:** 📝 Draft

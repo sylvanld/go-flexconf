@@ -1,3 +1,10 @@
+---
+tags:
+  - specs
+  - secrets
+  - cli
+---
+
 # Prompter (`flexprompt`)
 
 - **Status:** ✅ Accepted
