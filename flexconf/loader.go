@@ -25,15 +25,17 @@ type Loader struct {
 	dirs       []string
 	opts       loaderOptions
 	registries []variant.Binder // WithRegistry overrides for variant routing
+	secrets    *secretState     // per-Loader unlocked-vault cache (shared by With copies)
 }
 
 // loaderOptions collects the tunable Loader behaviour; populated by Options.
 type loaderOptions struct {
-	scoped   map[string]Resolver         // WithResolver overrides
-	set      map[string]Resolver         // WithResolvers replacement set
-	replaced bool                        // WithResolvers was called
-	env      func(string) (string, bool) // WithEnv source for env:
-	fsys     fs.FS                       // WithFS source for file:/config:
+	scoped       map[string]Resolver         // WithResolver overrides
+	set          map[string]Resolver         // WithResolvers replacement set
+	replaced     bool                        // WithResolvers was called
+	env          func(string) (string, bool) // WithEnv source for env:
+	fsys         fs.FS                       // WithFS source for file:/config:
+	secretPolicy SecretPolicy                // WithSecretPolicy (default PolicyAgent)
 }
 
 // Option tunes a Loader (see With).
@@ -46,7 +48,7 @@ func New(dirs ...string) *Loader {
 	if len(dirs) == 0 {
 		panic("flexconf: New requires at least one config directory")
 	}
-	return &Loader{dirs: dirs}
+	return &Loader{dirs: dirs, secrets: &secretState{}}
 }
 
 // With returns a copy of the Loader with the given options applied.
