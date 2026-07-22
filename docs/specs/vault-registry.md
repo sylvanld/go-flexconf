@@ -8,7 +8,7 @@ tags:
 
 # Vault Registry & Vault References
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** how vaults are **named and configured** (the vault registry), how
   those definitions are **layered** across files, how a **default vault** is
   chosen, and how config values **reference** a vault in a token
@@ -246,6 +246,15 @@ This **supersedes** the config-hash `VaultID` default in
   application ([prompter.md](prompter.md)); every vault that needs
   to prompt for a credential at unlock uses that same prompter. The registry
   names and configures vaults; it does not carry prompting behaviour.
+- **Runs on the shared variant engine (matching only).** Name → `VaultConf`
+  resolution reuses the `internal/variant` matching engine
+  ([variants.md](variants.md) §10): the `driver` key is the discriminator, the map
+  key is the `name` selector, and a driver's extra keys are its strict sub-schema.
+  The registry's **own** rules are unchanged and stay outside that engine — file
+  loading and location (§2.2), layering (§3), the static/no-tokens rule (§2.3), the
+  default vault (§4), and the `VaultID` fingerprint (§6). The vault family is
+  **registry-only**: instances come from operator files, not app config, and bind
+  to no struct field.
 
 This section **resolves** the "Multiple vaults" item deferred in
 [vault-drivers.md](vault-drivers.md) §12 and [cli.md](cli.md) §7: a config can

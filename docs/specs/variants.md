@@ -6,7 +6,7 @@ tags:
 
 # Variants & Registry
 
-- **Status:** 📝 Draft
+- **Status:** ✅ Accepted
 - **Scope:** the mechanism for **polymorphic configuration** — a config entry
   whose concrete Go type is chosen at load time by one of its own keys (a
   **discriminator**) — and the **registry** that instantiates every such entry,
@@ -20,11 +20,8 @@ tags:
   and strictly bound is in [schema-and-binding.md](schema-and-binding.md), which
   delegates the polymorphic case here. A **worked example** is in §8. The intended
   convergence with the **vault registry** ([vault-registry.md](vault-registry.md))
-  is described in §10 and is a **goal, not yet locked** (§10).
-
-> **Status caveat.** This is a draft to agree the *model*, but all the model-level
-> decisions are now settled (§11). What remains is the vault-registry convergence
-> (§10), which is intentionally a separate follow-up, not an open point here.
+  is **locked** in §10: the vault registry reuses this spec's matching engine while
+keeping its own file-loading, layering, and identity rules.
 
 ## 1. What problem this solves
 
@@ -346,7 +343,7 @@ The two list items need no `name`: `type=slack,team=platform` and
 `type=email,team=noc` are already distinct selector sets, so neither collides
 (§5's load-time uniqueness check) and each is uniquely resolvable.
 
-## 9. The API (sketch — not final)
+## 9. The API (summary; normative surface in [api.md](api.md))
 
 ```go
 package flexconf
@@ -411,10 +408,11 @@ explicit `*Registry[V]` values instead. Notes:
 - Because it is process-global, tests SHOULD prefer an explicit registry via
   `WithRegistry` to avoid cross-test leakage.
 
-## 10. Intended convergence with the vault registry (goal, not yet locked)
+## 10. Convergence with the vault registry (locked)
 
-The vault registry ([vault-registry.md](vault-registry.md)) is already shaped like
-a variant family and SHOULD become one:
+The vault registry ([vault-registry.md](vault-registry.md)) is shaped like a
+variant family and **is** one: it reuses this spec's matching engine (the
+`internal/variant` package, §9.1). The data-model mapping is:
 
 | Vault registry today | Variant mechanism |
 |----------------------|-------------------|
@@ -425,8 +423,27 @@ a variant family and SHOULD become one:
 | `default:` name | the `name` selector used for unqualified `$(secret:…)` |
 | `$(secret:[vault:]ns/key)` | `Resolve[Vault](reg, Select("name", vaultOrDefault))` |
 
-Placement (§9.1) is chosen so this is *possible*; actually rewiring the vault
-registry onto it is a **follow-up** to confirm before either spec changes.
+**Scope of the merge (locked): the matching engine only.** The vault registry
+reuses `internal/variant` for *resolution* — discriminator dispatch (on `driver`),
+the `name` selector, and strict sub-schema decoding of a driver's extra keys. It
+**keeps its own** operator-facing machinery, which the generic mechanism has no
+equivalent for and which does **not** move into the shared engine:
+
+- **File loading & location** — the well-known `~/.config/flexconf/vaults.yaml`
+  and the `FLEXCONF_VAULTS` ordered list ([vault-registry.md](vault-registry.md)
+  §2.2, §3).
+- **Layering** — whole-entry, later-wins override across files
+  ([vault-registry.md](vault-registry.md) §3).
+- **Static rule** — a `VaultConf` MUST contain no tokens
+  ([vault-registry.md](vault-registry.md) §2.3).
+- **Identity** — the `VaultID` name+fingerprint derivation
+  ([vault-registry.md](vault-registry.md) §6).
+
+One consequence is worth stating: for an app variant family the struct field is
+primary and the registry is a convenience (§11), whereas the vault family is
+**registry-only** — its instances come from operator files, not app config, and
+bind to no struct field. That is expected and is exactly why the vault-specific
+loading above stays outside the shared engine.
 
 ## 11. Locked decisions
 
@@ -456,3 +473,7 @@ registry onto it is a **follow-up** to confirm before either spec changes.
 - **Generic re-export via type alias** — `flexconf` re-exports the internal
   `Registry[V]` with a Go generic type alias; the module targets Go ≥ 1.24
   (`go.mod`: `go 1.26`) (§9.1).
+- **Vault-registry convergence — matching engine only.** The vault registry runs
+  on the shared `internal/variant` engine for resolution, and keeps its own
+  file-loading, layering, static rule, and `VaultID` identity; the vault family is
+  registry-only (no struct-field binding) (§10, [vault-registry.md](vault-registry.md) §7).
