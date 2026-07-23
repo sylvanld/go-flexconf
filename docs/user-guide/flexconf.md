@@ -1,10 +1,11 @@
 ---
+icon: lucide/layers
 tags:
   - reference
   - configuration
 ---
 
-# `flexconf` — loading configuration
+# Loading configuration
 
 Package `github.com/sylvanld/go-flexconf/flexconf` loads YAML configuration
 from one or more **config directories** (layers) into Go structs.

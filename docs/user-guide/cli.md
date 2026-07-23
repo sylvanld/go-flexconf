@@ -1,11 +1,12 @@
 ---
+icon: lucide/terminal
 tags:
   - reference
   - cli
   - secrets
 ---
 
-# CLI — `flexcli` & the `flexconf` binary
+# CLI & secret agent
 
 `flexcli` provides a mountable Cobra **`secret`** command group (alias
 `secrets`) driving the background secret agent. Two entry points share the

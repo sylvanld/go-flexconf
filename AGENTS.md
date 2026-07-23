@@ -5,7 +5,7 @@ Instructions for AI agents (and humans) working in this repository.
 ## What this project is
 
 **flexconf** is a Go SDK for flexible configuration and secret management. See
-[`docs/specs/README.md`](docs/specs/README.md) for the project summary and the
+[`docs/specs/index.md`](docs/specs/index.md) for the project summary and the
 index of all specifications.
 
 ## Golden rule: spec first
@@ -17,7 +17,7 @@ other way around.
 Before writing or changing any code:
 
 1. **Read the relevant spec(s)** in `docs/specs/`. Start from
-   [`docs/specs/README.md`](docs/specs/README.md), which indexes every spec.
+   [`docs/specs/index.md`](docs/specs/index.md), which indexes every spec.
 2. **If the behavior isn't specified, stop and write/update the spec first.**
    Get it agreed before implementing.
 3. **If the spec is wrong or incomplete, fix the spec** in the same change (or a
@@ -27,13 +27,13 @@ When code and spec disagree, the spec wins. Reconcile them explicitly.
 
 ## Working on specs
 
-- Keep [`docs/specs/README.md`](docs/specs/README.md) up to date: every spec
+- Keep [`docs/specs/index.md`](docs/specs/index.md) up to date: every spec
   file must have an entry in its index, with a one-line summary.
 - **Register every spec in the docs site nav.** Each spec file must have a
   corresponding entry under the `Specs` section of the `nav` in
   [`docs/zensical.toml`](docs/zensical.toml), or it will not appear on the
   published site. When you add, rename, or remove a spec, update the `nav` in
-  the same change (and keep it consistent with the README index).
+  the same change (and keep it consistent with the specs index page).
 - One spec file per coherent topic (e.g. config loading, templating, secret
   drivers). Prefer splitting over one giant file.
 - Each spec should state its **status** (`Draft`, `Accepted`, `Superseded`) at

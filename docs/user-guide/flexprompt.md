@@ -1,10 +1,11 @@
 ---
+icon: lucide/keyboard
 tags:
   - reference
   - secrets
 ---
 
-# `flexprompt` — credential collection
+# Credential prompting
 
 Package `github.com/sylvanld/go-flexconf/flexprompt` collects input values —
 typically credentials — from wherever your program runs: an interactive

@@ -1,4 +1,5 @@
 ---
+icon: lucide/vault
 tags:
   - reference
   - vault

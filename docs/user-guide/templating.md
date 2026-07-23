@@ -1,4 +1,5 @@
 ---
+icon: lucide/puzzle
 tags:
   - reference
   - templating
