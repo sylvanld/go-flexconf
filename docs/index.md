@@ -1,173 +1,116 @@
 ---
-icon: lucide/rocket
+icon: lucide/blocks
 ---
 
-# Get started
+# FlexConf
 
-For full documentation visit [zensical.org](https://zensical.org/docs/).
+**Flexible configuration & secret management for Go** — declare your config as
+plain Go types, and let the people who *write* the config decide where each
+value comes from: a file, an environment variable, or a vault. :sparkles:
 
-## Commands
-
-* [`zensical new`][new] - Create a new project
-* [`zensical serve`][serve] - Start local web server
-* [`zensical build`][build] - Build your site
-
-  [new]: https://zensical.org/docs/usage/new/
-  [serve]: https://zensical.org/docs/usage/preview/
-  [build]: https://zensical.org/docs/usage/build/
-
-## Examples
-
-### Admonitions
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/)
-
-!!! note
-
-    This is a **note** admonition. Use it to provide helpful information.
-
-!!! warning
-
-    This is a **warning** admonition. Be careful!
-
-### Details
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/#collapsible-blocks)
-
-??? info "Click to expand for more info"
-
-    This content is hidden until you click to expand it.
-    Great for FAQs or long explanations.
-
-## Code Blocks
-
-> Go to [documentation](https://zensical.org/docs/authoring/code-blocks/)
-
-``` python hl_lines="2" title="Code blocks"
-def greet(name):
-    print(f"Hello, {name}!") # (1)!
-
-greet("Python")
+```yaml
+service: api
+timeout: 10s
+url: https://$(env:HOST)/api            # 🌱 from the environment
+token: $(secret:artifactory/token)      # 🔐 from an encrypted vault
 ```
 
-1.  > Go to [documentation](https://zensical.org/docs/authoring/code-blocks/#code-annotations)
+Your application code never changes — it just sees a `string`.
 
-    Code annotations allow to attach notes to lines of code.
+## :thinking: Why FlexConf?
 
-Code can also be highlighted inline: `#!python print("Hello, Python!")`.
+Most config libraries make the **application** decide what is an env var, what
+is a flag, and what is a secret — hardcoded at compile time. FlexConf flips
+that around:
 
-## Content tabs
+!!! tip "The core idea"
 
-> Go to [documentation](https://zensical.org/docs/authoring/content-tabs/)
+    The **application** declares *what* configuration it needs (typed Go
+    structs). The **operator** decides *where* each value comes from — plain
+    YAML, `$(env:…)`, `$(file:…)`, or `$(secret:…)` — without touching a line
+    of Go.
 
-=== "Python"
+That separation is what makes the same binary run unchanged on a laptop, in
+CI, and in production — only the config files differ.
 
-    ``` python
-    print("Hello from Python!")
-    ```
+## :gear: How it works
 
-=== "Rust"
-
-    ``` rs
-    println!("Hello from Rust!");
-    ```
-
-## Diagrams
-
-> Go to [documentation](https://zensical.org/docs/authoring/diagrams/)
-
-``` mermaid
-graph LR
-  A[Start] --> B{Error?};
-  B -->|Yes| C[Hmm...];
-  C --> D[Debug];
-  D --> B;
-  B ---->|No| E[Yay!];
+```mermaid
+flowchart LR
+    A["📁 Config layers<br/><small>/etc/myapp → ./config</small>"] --> B["🔀 Deep merge"]
+    B --> C["🧩 Resolve tokens<br/><small>env · file · config · secret</small>"]
+    C --> D["🏷️ Bind to Go struct<br/><small>typed, validated, all-or-nothing</small>"]
+    C -.-> E["🔐 Vault agent<br/><small>ssh-agent-style, auto-locks</small>"]
 ```
 
-## Footnotes
+1. **Layer** — config directories are merged lowest → highest precedence.
+2. **Resolve** — `$(scheme:path)` tokens are expanded at load time.
+3. **Bind** — the merged tree is bound to your struct; on any error, your
+   struct is left untouched.
 
-> Go to [documentation](https://zensical.org/docs/authoring/footnotes/)
+## :package: What's in the box
 
-Here's a sentence with a footnote.[^1]
+<div class="grid cards" markdown>
 
-Hover it, to see a tooltip.
+-   :material-layers-triple:{ .lg .middle } **Layered configuration**
 
-[^1]: This is the footnote.
+    ---
 
+    Stack config directories (`/etc/myapp`, `./config`, …). Maps deep-merge,
+    scalars override — defaults live in Go.
 
-## Formatting
+-   :material-code-braces:{ .lg .middle } **Typed schema & binding**
 
-> Go to [documentation](https://zensical.org/docs/authoring/formatting/)
+    ---
 
-- ==This was marked (highlight)==
-- ^^This was inserted (underline)^^
-- ~~This was deleted (strikethrough)~~
-- H~2~O
-- A^T^A
-- ++ctrl+alt+del++
+    Plain Go structs with `flexconf` tags. Required fields, durations,
+    nested types — binding is all-or-nothing.
 
-## Icons, Emojis
+-   :material-code-string:{ .lg .middle } **Templating tokens**
 
-> Go to [documentation](https://zensical.org/docs/authoring/icons-emojis/)
+    ---
 
-* :sparkles: `:sparkles:`
-* :rocket: `:rocket:`
-* :tada: `:tada:`
-* :memo: `:memo:`
-* :eyes: `:eyes:`
+    `$(env:…)`, `$(file:…)`, `$(config:…)`, `$(secret:…)` — embeddable in
+    literal text, with escaping and custom resolvers.
 
-## Maths
+-   :material-safe-square:{ .lg .middle } **Vault-backed secrets**
 
-> Go to [documentation](https://zensical.org/docs/authoring/math/)
+    ---
 
-$$
-\cos x=\sum_{k=0}^{\infty}\frac{(-1)^k}{(2k)!}x^{2k}
-$$
+    Secrets live in an encrypted vault (KeePass, …), never in config files.
+    Operators own the vault registry.
 
-!!! warning "Needs configuration"
-    Note that MathJax is included via a `script` tag on this page and is not
-    configured in the generated default configuration to avoid including it
-    in a pages that do not need it. See the documentation for details on how
-    to configure it on all your pages if they are more Maths-heavy than these
-    simple starter pages.
+-   :material-console:{ .lg .middle } **Secret agent & CLI**
 
-<script id="MathJax-script" src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
-<script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [["\\(", "\\)"]],
-      displayMath: [["\\[", "\\]"]],
-      processEscapes: true,
-      processEnvironments: true
-    },
-    options: {
-      ignoreHtmlClass: ".*|",
-      processHtmlClass: "arithmatex"
-    }
-  };
+    ---
 
-  document$.subscribe(() => {
-    MathJax.startup.output.clearCache()
-    MathJax.typesetClear()
-    MathJax.texReset()
-    MathJax.typesetPromise()
-  })
-</script>
+    `flexconf secret unlock` spawns an ssh-agent-style daemon holding the
+    unlocked vault in memory, auto-locking on idle.
 
-## Task Lists
+-   :material-shape-plus:{ .lg .middle } **Variants & prompting**
 
-> Go to [documentation](https://zensical.org/docs/authoring/lists/#using-task-lists)
+    ---
 
-* [x] Install Zensical
-* [x] Configure `zensical.toml`
-* [x] Write amazing documentation
-* [ ] Deploy anywhere
+    Polymorphic config via discriminators, and interactive prompting when a
+    value can't be resolved silently.
 
-## Tooltips
+</div>
 
-> Go to [documentation](https://zensical.org/docs/authoring/tooltips/)
+## :rocket: Try it in 30 seconds
 
-[Hover me][example]
+```console
+$ go get github.com/sylvanld/go-flexconf
+```
 
-  [example]: https://example.com "I'm a tooltip!"
+```go
+type Config struct {
+    Service string `flexconf:"service,required"`
+    Token   string `flexconf:"token"` // may be $(secret:…) — the type doesn't care
+}
+
+var cfg Config
+err := flexconf.New("/etc/myapp", "./config").Load("config.yaml", &cfg)
+```
+
+That's it — head to the **[Get started](quickstart.md)** guide for the full
+four-step setup, including secrets. :point_left:

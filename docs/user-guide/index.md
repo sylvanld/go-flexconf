@@ -92,5 +92,5 @@ Worth knowing before you dive in:
 !!! question "Just want it running?"
 
     This guide explains; it doesn't hand-hold. For the four-step end-to-end
-    setup, use **[Get started](../index.md)** — then come back here when
+    setup, use **[Get started](../quickstart.md)** — then come back here when
     you want to know *why* it works.

@@ -1,18 +1,46 @@
 # flexconf
 
-**flexconf** is a Go SDK for flexible **configuration** and **secret**
-management, unifying the two so that config files can transparently reference
-secrets and environment values.
+> **Flexible configuration & secret management for Go** — declare your config
+> as plain Go types, and let the people who *write* the config decide where
+> each value comes from: a file, an environment variable, or a vault. ✨
 
-An application declares the structure of its configuration as Go types and lets
-flexconf load it from one or more config directories. Config files may contain
-templating tokens such as `$(env:FOO)` or `$(secret:artifactory/token)`; the
-person authoring the config decides which values are pulled from the
-environment or from a secret backend. flexconf resolves those tokens at load
-time, delegating `secret:` lookups to a pluggable **vault driver** (Vault, cloud
-secret managers, files, …) selected at runtime.
+[![Documentation](https://img.shields.io/badge/docs-sylvanld.github.io%2Fgo--flexconf-blue?logo=materialformkdocs&logoColor=white)](https://sylvanld.github.io/go-flexconf/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sylvanld/go-flexconf.svg)](https://pkg.go.dev/github.com/sylvanld/go-flexconf)
 
-## Quick start
+```yaml
+service: api
+timeout: 10s
+url: https://$(env:HOST)/api            # 🌱 from the environment
+token: $(secret:artifactory/token)      # 🔐 from an encrypted vault
+```
+
+Your application code never changes — it just sees a `string`. Tokens are
+resolved at load time; `secret:` lookups go through a pluggable **vault
+driver** selected at runtime by the operator, not the application.
+
+## ✨ Highlights
+
+- 🗂️ **Layered configuration** — stack config directories; maps deep-merge,
+  scalars override, defaults live in Go.
+- 🏷️ **Typed schema & binding** — plain Go structs with `flexconf` tags;
+  binding is all-or-nothing.
+- 🧩 **Templating tokens** — `$(env:…)`, `$(file:…)`, `$(config:…)`,
+  `$(secret:…)`, embeddable in literal text.
+- 🔐 **Vault-backed secrets** — secrets never live in config files; operators
+  own the vault registry.
+- 🕵️ **Secret agent & CLI** — an ssh-agent-style daemon holds the unlocked
+  vault in memory and auto-locks on idle.
+
+## 🚀 Quick start
+
+Install the SDK:
+
+```console
+$ go get github.com/sylvanld/go-flexconf
+```
+
+Declare your configuration as a plain Go struct and load it from one or more
+config directories — later directories override earlier ones:
 
 ```go
 import (
@@ -38,40 +66,47 @@ func main() {
 }
 ```
 
+Write the config file — any value may pull from the environment or from a
+vault via `$(…)` tokens, resolved at load time:
+
 ```yaml
 # ./config/config.yaml
 service: api
-token: $(secret:artifactory/token)   # resolved via the operator's vault registry
+timeout: 10s
+token: $(secret:artifactory/token)
 url: https://$(env:HOST)/api
 ```
 
-Manage vaults from the shipped CLI:
+Finally, create a vault and store the secret using the shipped CLI — your app
+then resolves `$(secret:…)` through a background agent, no code changes:
 
 ```console
+$ go install github.com/sylvanld/go-flexconf/cmd/flexconf@latest
 $ flexconf secret init && flexconf secret unlock
 $ echo -n 'tok' | flexconf secret set artifactory/token
 ```
 
-## Packages
+For the full four-step walkthrough (including secrets), see
+**[Get started](https://sylvanld.github.io/go-flexconf/quickstart/)**.
 
-| Package | Purpose |
-|---------|---------|
-| `flexconf` | Config loading: layered directories, templating tokens, schema binding, variants. |
-| `flexvault` (+ `flexvault/driver/keepass`) | Pluggable secret backends and the `Manager` lifecycle. |
-| `flexprompt` | Credential collection (CLI/map/env prompters, process-wide singleton). |
-| `flexcli` + `cmd/flexconf` | Mountable Cobra `secret` command group and the standalone binary, backed by an ssh-agent-style secret agent. |
+## 📚 Documentation
 
-## Status
+Full documentation lives at **<https://sylvanld.github.io/go-flexconf/>**:
 
-**v1 implemented**, spec-first. The specifications in
-[`docs/specs/`](docs/specs/) are the source of truth
-([index](docs/specs/index.md)); the practical guide lives in
-[`docs/user-guide/`](docs/user-guide/); the delivery plan in
-[`docs/roadmap/`](docs/roadmap/). See [`AGENTS.md`](AGENTS.md) for how to
-work in this repository.
+| | |
+|---|---|
+| 🏠 [Overview](https://sylvanld.github.io/go-flexconf/) | What flexconf is and how it works. |
+| 🚀 [Get started](https://sylvanld.github.io/go-flexconf/quickstart/) | Minimal setup in four steps. |
+| 📖 [User guide](https://sylvanld.github.io/go-flexconf/user-guide/) | One practical page per package or topic. |
+| 📜 [Specs](https://sylvanld.github.io/go-flexconf/specs/) | The normative source of truth. |
+| 🗺️ [Roadmap](https://sylvanld.github.io/go-flexconf/roadmap/) | The delivery plan. |
 
-## Documentation
+The site is built with [Zensical](https://zensical.org/) from the
+[`docs/`](docs/) directory — run `make docs-serve` to preview locally.
 
-The docs site is built with [Zensical](https://zensical.org/) from the `docs/`
-directory. Run `make docs-serve` to preview locally, or `make help` to list all
-targets.
+## 🧭 Status
+
+**v0.0.1 implemented**, spec-first: the [specs](docs/specs/index.md) drive the
+implementation and the [roadmap](docs/roadmap/index.md) tracks delivery. See
+[`AGENTS.md`](AGENTS.md) for how to work in this repository, or `make help`
+for all targets.
