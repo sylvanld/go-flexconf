@@ -65,8 +65,8 @@ $ echo -n 'tok' | flexconf secret set artifactory/token
 
 **v1 implemented**, spec-first. The specifications in
 [`docs/specs/`](docs/specs/) are the source of truth
-([index](docs/specs/README.md)); the practical guide lives in
-[`docs/reference/`](docs/reference/); the delivery plan in
+([index](docs/specs/index.md)); the practical guide lives in
+[`docs/user-guide/`](docs/user-guide/); the delivery plan in
 [`docs/roadmap.md`](docs/roadmap.md). See [`AGENTS.md`](AGENTS.md) for how to
 work in this repository.
 

@@ -1,4 +1,5 @@
 ---
+icon: lucide/braces
 tags:
   - reference
   - configuration

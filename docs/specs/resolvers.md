@@ -146,7 +146,7 @@ $(env:NAME)
 
 - Resolves to the value of environment variable `NAME`.
 - **Missing variable is a hard error** (`ErrEnvNotSet`, §7) — fail loud, per
-  [README.md](README.md). flexconf does not silently substitute empty string.
+  [specs index](index.md). flexconf does not silently substitute empty string.
 - The source is the process environment by default; `WithEnv(env func(string) (string, bool))`
   overrides it for a Loader (testability, mirrors the injection surface noted in
   [missing.md](missing.md) §2.7). Built-in default reads `os.LookupEnv`.

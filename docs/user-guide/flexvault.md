@@ -1,11 +1,12 @@
 ---
+icon: lucide/database
 tags:
   - reference
   - vault
   - secrets
 ---
 
-# `flexvault` — secret backends
+# Vault drivers
 
 Package `github.com/sylvanld/go-flexconf/flexvault` provides pluggable secret
 backends. A **`VaultDriver`** implements the mechanics of one backend; a

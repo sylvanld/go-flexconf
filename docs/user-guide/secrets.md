@@ -1,4 +1,5 @@
 ---
+icon: lucide/key-round
 tags:
   - reference
   - secrets

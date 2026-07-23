@@ -172,7 +172,7 @@ file for a name also fixes the base directory for that name's relative paths.
   genuinely needs *more than one* vault at the same time.
 - **Fail fast on the unspecified.** If a token is unqualified and **no** default
   vault is resolvable, it means nothing — the loader MUST fail loudly at load
-  time with a clear error (per [README.md](README.md) "fail loud, fail early").
+  time with a clear error (per [specs index](index.md) "fail loud, fail early").
   It MUST NOT silently pick an arbitrary vault.
 
 ## 5. Vault references in tokens

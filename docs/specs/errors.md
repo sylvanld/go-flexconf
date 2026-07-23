@@ -20,7 +20,7 @@ tags:
 
 ## 1. Principles
 
-- **Fail loud, fail early** ([README.md](README.md)). Every error surfaces at
+- **Fail loud, fail early** ([specs index](index.md)). Every error surfaces at
   `Load` (or at CLI command time), never as a silent default or a deferred
   surprise. There is no lenient/best-effort mode.
 - **Match with `errors.Is`.** All exported sentinels are package-level `error`

@@ -88,7 +88,7 @@ differ.)
   "some layer contains `name`" requirement) and contributes an **empty tree** (no
   keys); it is not an error and merges as nothing.
 - If **no** layer contains `name`, `Load` MUST fail with `ErrConfigNotFound`
-  (fail loud, per [README.md](README.md) — never bind a silently empty config).
+  (fail loud, per [specs index](index.md) — never bind a silently empty config).
 
 ### Normative merge semantics
 
