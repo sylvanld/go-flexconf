@@ -90,7 +90,7 @@ nav = [
   { "Roadmap" = [
     "roadmap/index.md",
     { "Backlog" = "roadmap/backlog.md" },
-    { "v0.0.1" = "roadmap/v0.0.1.md" },
+    { "v0.1.0" = "roadmap/v0.1.0.md" },
   ] },
 ]
 

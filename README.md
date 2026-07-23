@@ -106,7 +106,7 @@ The site is built with [Zensical](https://zensical.org/) from the
 
 ## 🧭 Status
 
-**v0.0.1 implemented**, spec-first: the [specs](docs/specs/index.md) drive the
+**v0.1.0 implemented**, spec-first: the [specs](docs/specs/index.md) drive the
 implementation and the [roadmap](docs/roadmap/index.md) tracks delivery. See
 [`AGENTS.md`](AGENTS.md) for how to work in this repository, or `make help`
 for all targets.

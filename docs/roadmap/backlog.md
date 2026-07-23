@@ -5,13 +5,13 @@ tags:
 
 # Backlog
 
-Additive ideas deliberately left out of v0.0.1. None blocks the current
+Additive ideas deliberately left out of v0.1.0. None blocks the current
 surface, and each can be added later without breaking it. Items graduate from
 here into a versioned roadmap page when scheduled.
 
 ## More secret-resolver backends
 
-v0.0.1 ships the KeePass driver ([vault-drivers.md](../specs/vault-drivers.md)).
+v0.1.0 ships the KeePass driver ([vault-drivers.md](../specs/vault-drivers.md)).
 These are the most-wanted additions, all as new `flexvault/driver/*` packages:
 
 | Driver | What it does | Why it matters |
@@ -23,21 +23,21 @@ These are the most-wanted additions, all as new `flexvault/driver/*` packages:
 
 A `MaxLifetime` (absolute relock cap, default 30m) on top of the idle timeout,
 and a `Harden()` step after unlock (`RLIMIT_CORE=0`, `PR_SET_DUMPABLE=0`,
-`Mlockall`, best-effort/Linux). v0.0.1 has the idle timeout only and lists
+`Mlockall`, best-effort/Linux). v0.1.0 has the idle timeout only and lists
 mlock as "future hardening" ([cli.md](../specs/cli.md) §6.5, §8). Cheap and
 proven in a prior implementation; candidate to promote.
 
 ## A config-file generator CLI: `settings init` / `path`
 
 A second Cobra group that renders declared defaults to `config.yaml` (refuses
-to clobber, `0600`, round-trips) and prints the location. v0.0.1 has no
+to clobber, `0600`, round-trips) and prints the location. v0.1.0 has no
 config-printing/generating command at all ([cli.md](../specs/cli.md) §12).
 Low-cost onboarding win for a later release.
 
 ## App-name-derived config directory
 
 Resolve **one** directory (`WithPath` → `<APP>_CONFIG` → `~/.config/<app>/`)
-so `config.yaml` and the vault file relocate together. v0.0.1 takes an
+so `config.yaml` and the vault file relocate together. v0.1.0 takes an
 explicit `dirs` list and defers discovery
 ([config-loading.md](../specs/config-loading.md) §7). A nicer default UX;
 deferred, not rejected.
@@ -45,6 +45,6 @@ deferred, not rejected.
 ## A deferred-decode `Settings` object
 
 An intermediate resolved-tree object (`Decode`, `Dump`, `Marshal/Unmarshal`)
-alongside the one-shot `Load`. v0.0.1's only entry point is `Load(name, &dst)`
+alongside the one-shot `Load`. v0.1.0's only entry point is `Load(name, &dst)`
 ([api.md](../specs/api.md) §6). Ties to a future config-dump feature if one is
 ever added.

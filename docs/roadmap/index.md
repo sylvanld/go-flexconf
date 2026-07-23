@@ -11,4 +11,4 @@ collects accepted-in-principle candidates not yet assigned to a version.
 
 | Version | Scope | Status |
 |---------|-------|--------|
-| [v0.0.1](v0.0.1.md) | Initial implementation: loader, templating, variants, vaults, secret agent, CLI. | ✅ Complete |
+| [v0.1.0](v0.1.0.md) | Initial implementation: loader, templating, variants, vaults, secret agent, CLI. | ✅ Complete |
