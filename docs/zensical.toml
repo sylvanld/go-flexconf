@@ -48,7 +48,8 @@ Copyright &copy; 2026 Sylvan Le Deunff
 #
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
-  { "Get started" = "index.md" },
+  { "FlexConf" = "index.md" },
+  { "Get started" = "quickstart.md" },
   { "User guide" = [
     "user-guide/index.md",
     { "Loading configuration" = "user-guide/flexconf.md" },
