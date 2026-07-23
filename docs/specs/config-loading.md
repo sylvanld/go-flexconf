@@ -237,7 +237,7 @@ var (
 - **Directory discovery vs. explicit list.** v1 takes an explicit `dirs` list;
   adding well-known/XDG discovery or an env override (à la `FLEXCONF_VAULTS`,
   [vault-registry.md](vault-registry.md) §3) — and the related app-name-derived
-  single directory ([missing.md](missing.md) §2.4) — is deferred. It would be a
+  single directory ([backlog](../roadmap/backlog.md)) — is deferred. It would be a
   new constructor/option, not a change to the load model.
 - **Additional file formats** (TOML/JSON, …) — v1 is YAML-only (§2); addable
   later without changing the load model.

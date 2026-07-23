@@ -29,7 +29,7 @@ Two related needs, one mechanism:
 
 1. **Config-time (binding).** A config block whose concrete type is chosen by one
    of its own fields — the single biggest binding feature the originating project
-   needs ([missing.md](missing.md) §1.3). Each variant selects a **strict,
+   needs. Each variant selects a **strict,
    different sub-schema** for its remaining keys.
 2. **Runtime (resolution) — a convenience.** A variant is bound into its struct
    field like any other value. In addition, every variant instance is collected

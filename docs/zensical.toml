@@ -49,7 +49,6 @@ Copyright &copy; 2026 Sylvan Le Deunff
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
   { "Get started" = "index.md" },
-  { "Roadmap" = "roadmap.md" },
   { "User guide" = [
     "user-guide/index.md",
     { "Loading configuration" = "user-guide/flexconf.md" },
@@ -76,7 +75,11 @@ nav = [
     { "CLI & secret agent" = "specs/cli.md" },
     { "Public API surface" = "specs/api.md" },
     { "Errors" = "specs/errors.md" },
-    { "Candidate features" = "specs/missing.md" },
+  ] },
+  { "Roadmap" = [
+    "roadmap/index.md",
+    { "Backlog" = "roadmap/backlog.md" },
+    { "v0.0.1" = "roadmap/v0.0.1.md" },
   ] },
 ]
 

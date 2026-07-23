@@ -148,13 +148,12 @@ $(env:NAME)
 - **Missing variable is a hard error** (`ErrEnvNotSet`, §7) — fail loud, per
   [specs index](index.md). flexconf does not silently substitute empty string.
 - The source is the process environment by default; `WithEnv(env func(string) (string, bool))`
-  overrides it for a Loader (testability, mirrors the injection surface noted in
-  [missing.md](missing.md) §2.7). Built-in default reads `os.LookupEnv`.
+  overrides it for a Loader (testability). Built-in default reads `os.LookupEnv`.
 - `NAME` is opaque to flexconf; no interpolation or nesting inside it.
 
 > **Decided — no `$(env:NAME:-default)`.** An env-only default (missing var →
-> literal default, proposed in [missing.md](missing.md) §1.6) is **rejected**: a
-> missing env var is always a hard error (above), and no scheme has defaulting
+> literal default) is **rejected**: a missing env var is always a hard error
+> (above), and no scheme has defaulting
 > syntax ([templating.md](templating.md) §10). Supply fallbacks via config-file
 > defaults in the schema/binding layer instead.
 
@@ -170,11 +169,11 @@ $(file:/abs/or/relative/path)
   / a wrapped read error (§7).
 - A **relative** path resolves against the directory of the config file that
   contained the token (same base rule as `$(config:...)` includes,
-  [missing.md](missing.md) §1.1), **not** the process working directory — so a
+  [templating.md](templating.md) §7), **not** the process working directory — so a
   value's meaning does not depend on where the app was launched.
 - The file source is injectable via `WithFS(fsys fs.FS)` (testability).
-- `file:` reads **non-secret** content. Reading a credential from disk is what a
-  vault driver (e.g. an encrypted-file driver, [missing.md](missing.md) §1.5) is
+- `file:` reads **non-secret** content. Reading a credential is what a vault
+  driver (e.g. the KeePass driver, [vault-drivers.md](vault-drivers.md) §10) is
   for; `file:` values are **not** tainted/redacted.
 
 ## 5. `secret:` — vaults, through the agent
@@ -241,8 +240,9 @@ entirely inside the proxy.
 ### 5.3 In-process (agent-less) mode
 
 An agent is not always wanted — a one-shot CI job, a short-lived batch, or a
-non-interactive `env-vault` backend ([missing.md](missing.md) §1.5) has nothing to
-gain from a resident process and may not be able to spawn one (see §5.4). A Loader
+non-interactive `env-vault` backend (a [backlog](../roadmap/backlog.md)
+candidate) has nothing to gain from a resident process and may not be able to
+spawn one (see §5.4). A Loader
 MAY select **in-process** resolution:
 
 ```go

@@ -68,8 +68,8 @@ See [overview.md](overview.md) "Module layout" for the normative description.
 | [resolvers.md](resolvers.md) | ✅&nbsp;Accepted | The `Resolver` interface and registration, built-in schemes (`env`, `secret`, `file`), and how the `secret:` scheme reaches a vault through the background agent (spawning one like the CLI when none is running). |
 | [api.md](api.md) | ✅&nbsp;Accepted | Public Go API surface of the SDK, gathered per package (semantics owned by the topic specs). |
 | [errors.md](errors.md) | ✅&nbsp;Accepted | Error taxonomy, wrapping, secret-origin redaction, and the `errors.Is` contract. |
-| [missing.md](missing.md) | 🗒️&nbsp;Notes | Non-normative gap analysis: what landed in the specs and the post-v1 candidate list. |
 
-> All v1 specs are accepted. [missing.md](missing.md) is non-normative notes.
+> All v1 specs are accepted. Post-v1 candidate features live in the
+> [roadmap backlog](../roadmap/backlog.md).
 > When you add a spec, create the file, update this table, and register it in the
 > Zensical nav (`docs/zensical.toml`).
