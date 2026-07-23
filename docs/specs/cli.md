@@ -598,7 +598,7 @@ uses the same running agent if present, or unlocks per the loader's policy.
 - **Config-loading / config-dump commands** (printing or validating the app's own
   config) — **not in v1.** v1 has no config-printing feature at all
   ([errors.md](errors.md) §4); an `init`/`path`-style generator
-  ([missing.md](missing.md) §2.5) is a possible additive post-v1 command, not a v1
+  ([backlog](../roadmap/backlog.md)) is a possible additive post-v1 command, not a v1
   deliverable.
 - **Non-Unix transports** — v1 targets Unix domain sockets; Windows named pipes
   (or AF_UNIX on modern Windows) are deferred.

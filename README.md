@@ -67,7 +67,7 @@ $ echo -n 'tok' | flexconf secret set artifactory/token
 [`docs/specs/`](docs/specs/) are the source of truth
 ([index](docs/specs/index.md)); the practical guide lives in
 [`docs/user-guide/`](docs/user-guide/); the delivery plan in
-[`docs/roadmap.md`](docs/roadmap.md). See [`AGENTS.md`](AGENTS.md) for how to
+[`docs/roadmap/`](docs/roadmap/). See [`AGENTS.md`](AGENTS.md) for how to
 work in this repository.
 
 ## Documentation
